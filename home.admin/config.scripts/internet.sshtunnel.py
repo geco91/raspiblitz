@@ -42,6 +42,8 @@ LNDPORT = subprocess.getoutput("sudo cat /mnt/hdd/lnd/lnd.conf | grep '^listen=*
 if len(LNDPORT) == 0:
     LNDPORT="9735"
 
+
+
 #
 # RESTORE = SWITCHING ON with restore flag on
 # on restore other external scripts dont need calling
@@ -63,7 +65,7 @@ if sys.argv[1] == "on":
     # check if already running
     isRunning = subprocess.getoutput("sudo systemctl --no-pager | grep -c '%s'" % (SERVICENAME))
     if int(isRunning) > 0:
-      print("SSH TUNNEL ALREADY ACTIVATED - run 'internet.sshtunnel.py off' first to set new tunnel")
+      print("SSH TUNNEL SERVICE IS RUNNING - run 'internet.sshtunnel.py off' first to set new tunnel")
       sys.exit(1)
 
     # check server address
@@ -101,7 +103,7 @@ if sys.argv[1] == "on":
             print("[INTERNAL-PORT]<[EXTERNAL-PORT] external not number '%s'" % (sys.argv[i]))
             sys.exit(1) 
         if port_internal == LNDPORT:
-            print("Detected LND Port Forwaring")
+            print("Detected LND Port Forwarding")
             forwardingLND = True
             if port_internal != port_external:
                 print("FAIL: When tunneling your local LND port '%s' it needs to be the same on the external server, but is '%s'" % (LNDPORT,port_external))
@@ -156,17 +158,25 @@ if sys.argv[1] == "on":
     file_content = re.sub("sshtunnel=.*", "sshtunnel='%s %s'" % (ssh_server, ssh_ports), file_content)
     if restoringOnUpdate == False:
         serverdomain=ssh_server.split("@")[1]
+
         # make sure serverdomain is set as tls alias 
-        print("Setting server as tls alias and generating new certs")
+        print("Setting server as tls alias")
+        oldConfigHash=subprocess.getoutput("sudo shasum -a 256 /mnt/hdd/lnd/lnd.conf")
         subprocess.call("sudo sed -i \"s/^#tlsextradomain=.*/tlsextradomain=/g\" /mnt/hdd/lnd/lnd.conf", shell=True)
         subprocess.call("sudo sed -i \"s/^tlsextradomain=.*/tlsextradomain=%s/g\" /mnt/hdd/lnd/lnd.conf" % (serverdomain), shell=True)
-        subprocess.call("sudo /home/admin/config.scripts/lnd.newtlscert.sh", shell=True)
+        newConfigHash=subprocess.getoutput("sudo shasum -a 256 /mnt/hdd/lnd/lnd.conf")
+        if oldConfigHash != newConfigHash:
+            print("lnd.conf changed ... generating new TLS cert")
+            subprocess.call("sudo /home/admin/config.scripts/lnd.newtlscert.sh", shell=True)
+        else:
+            print("lnd.conf unchanged... keep TLS cert")
+
         if forwardingLND:
             # setting server explicitly on LND if LND port is forwarded
-            print("Setting server domain for LND Port")
-            subprocess.call("sudo /home/admin/config.scripts/lnd.setaddress.sh on %s" % (serverdomain), shell=True)
+            print("Setting fixed address for LND with raspiblitz lndAddress")
+            file_content = re.sub("lndAddress=.*", "lndAddress='%s'" % (serverdomain), file_content)
         else:
-            print("No need to set fixed domain forwarding")
+            print("No need to set fixed address for LND with raspiblitz lndAddress")
     file_content = "".join([s for s in file_content.splitlines(True) if s.strip("\r\n")]) + "\n"
     print(file_content)
     with open("/mnt/hdd/raspiblitz.conf", "w") as text_file:
@@ -207,6 +217,7 @@ elif sys.argv[1] == "off":
     print("*** Disabling systemd service: %s" % (SERVICENAME))
     subprocess.call("sudo systemctl stop %s" % (SERVICENAME), shell=True)
     subprocess.call("sudo systemctl disable %s" % (SERVICENAME), shell=True)
+    subprocess.call("sudo systemctl reset-failed", shell=True)
     subprocess.call("sudo rm %s" % (SERVICEFILE), shell=True)
     subprocess.call("sudo systemctl daemon-reload", shell=True)
     print("OK Done")

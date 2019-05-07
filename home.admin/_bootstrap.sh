@@ -64,6 +64,12 @@ if [ "${setupStep}" != "100" ]; then
 fi
 sudo chmod 777 ${infoFile}
 
+# resetting start count files
+echo "SYSTEMD RESTART LOG: blockchain (bitcoind/litecoind)" > /home/admin/systemd.blockchain.log
+echo "SYSTEMD RESTART LOG: lightning (LND)" > /home/admin/systemd.lightning.log
+sudo chmod 777 /home/admin/systemd.blockchain.log
+sudo chmod 777 /home/admin/systemd.lightning.log
+
 # Emergency cleaning logs when over 1GB (to prevent SD card filling up)
 # see https://github.com/rootzoll/raspiblitz/issues/418#issuecomment-472180944
 echo "*** Checking Log Size ***"
@@ -386,6 +392,32 @@ fi
 #################################
 sudo chown bitcoin:bitcoin -R /mnt/hdd/bitcoin 2>/dev/null
 
+#################################
+# MAKE SURE ADMIN USER HAS LATEST LND DATA
+#################################
+source ${configFile}
+if [ ${#network} -gt 0 ] && [ ${#chain} -gt 0 ]; then
+
+  echo "making sure LND blockchain RPC password is set correct in lnd.conf" >> $logFile
+  source <(sudo cat /mnt/hdd/${network}/${network}.conf 2>/dev/null | grep "rpcpass" | sed 's/^[a-z]*\./lnd/g')
+  if [ ${#rpcpassword} -gt 0 ]; then
+    sudo sed -i "s/^${network}d.rpcpass=.*/${network}d.rpcpass=${rpcpassword}/g" /mnt/hdd/lnd/lnd.conf 2>/dev/null
+  else
+    echo "WARN: could not get value 'rpcuser' from blockchain conf" >> $logFile
+  fi
+
+  echo "updating admin user LND data" >> $logFile
+  sudo cp /mnt/hdd/lnd/lnd.conf /home/admin/.lnd/lnd.conf 2>> $logFile
+  sudo chown admin:admin /home/admin/.lnd/lnd.conf 2>> $logFile
+  sudo cp /mnt/hdd/lnd/tls.cert /home/admin/.lnd/tls.cert 2>> $logFile
+  sudo chown admin:admin /home/admin/.lnd/tls.cert 2>> $logFile
+  sudo cp /mnt/hdd/lnd/data/chain/${network}/${chain}net/admin.macaroon /home/admin/.lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null
+  sudo chown admin:admin /home/admin/.lnd/data/chain/${network}/${chain}net/admin.macaroon 2>> $logFile
+
+else 
+  echo "skipping admin user LND data update" >> $logFile
+fi
+
 ################################
 # DETECT FRESHLY RECOVERED SD
 ################################
@@ -425,6 +457,16 @@ if [ ${loaded} -gt 0 ]; then
   sed -i "s/^network=.*/network=litecoin/g" ${infoFile}
   sed -i "s/^chain=.*/chain=main/g" ${infoFile}
 fi
+
+################################
+# DELETE LOG FILES
+################################
+# LND and Blockchain Errors will be still in systemd journals
+
+# /mnt/hdd/bitcoin/debug.log
+sudo rm /mnt/hdd/${network}/debug.log 2>/dev/null
+# /mnt/hdd/lnd/logs/bitcoin/mainnet/lnd.log
+sudo rm /mnt/hdd/lnd/logs/${network}/${chain}net/lnd.log 2>/dev/null
 
 ################################
 # STRESSTEST HARDWARE
