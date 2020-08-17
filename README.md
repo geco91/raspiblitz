@@ -156,7 +156,7 @@ Insert the SD card and connect the power plug.
 * [Can I directly connect the RaspiBlitz with my laptop?](FAQ.md#can-i-directly-connect-the-raspiblitz-with-my-laptop)
 * [I connected my HDD but it still says 'Connect HDD' on the display?](FAQ.md#i-connected-my-hdd-but-it-still-says-connect-hdd-on-the-display)
 
-When everything boots up correctly, you should see the local IP address of your RaspiBlitz on the LCD panel.
+When everything boots up correctly, you should see the local IP address of your RaspiBlitz on the LCD-panel.
 
 ![LCD0](pictures/lcd0-welcome.png)
 
