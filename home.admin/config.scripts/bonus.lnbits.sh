@@ -213,6 +213,8 @@ if [ "$1" = "sync" ] || [ "$1" = "repo" ]; then
   sudo git branch -v
   # pull latest code
   sudo git pull
+  # make sure all requirements are there
+  sudo -u lnbits ./venv/bin/pip install -r requirements.txt
   # restart lnbits service
   sudo systemctl restart lnbits
   echo "# server is restarting ... maybe takes some seconds until available"
@@ -280,7 +282,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     # do install like this
 
     sudo -u lnbits python3 -m venv venv
-    #sudo -u lnbits /home/lnbits/lnbits/venv/bin/pip install hypercorn
+    sudo -u lnbits /home/lnbits/lnbits/venv/bin/pip install hypercorn
     sudo -u lnbits ./venv/bin/pip install -r requirements.txt
 
     # process assets
