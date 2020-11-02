@@ -282,7 +282,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     # do install like this
 
     sudo -u lnbits python3 -m venv venv
-    sudo -u lnbits /home/lnbits/lnbits/venv/bin/pip install hypercorn
+    #sudo -u lnbits /home/lnbits/lnbits/venv/bin/pip install hypercorn
     sudo -u lnbits ./venv/bin/pip install -r requirements.txt
 
     # process assets
@@ -295,7 +295,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
     # quickfix bug: https://github.com/lnbits/lnbits/issues/99
     chmod 777 /home/admin/assets/bundle.css
-    sudo -u lnbits cp /home/admin/assets/bundle.css /home/lnbits/lnbits/lnbits/static/bundle.css
+    ##sudo -u lnbits cp /home/admin/assets/bundle.css /home/lnbits/lnbits/lnbits/static/bundle.css
 
     # open firewall
     echo
