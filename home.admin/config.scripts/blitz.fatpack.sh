@@ -18,6 +18,14 @@ elif [ -d /boot ]; then
 fi
 echo "# raspi_bootdir(${raspi_bootdir})"
 
+# determine if this is a release candidate (use file not cache)
+codeVersion=$(cat /home/admin/_version.info | grep 'codeVersion="' | cut -d'"' -f2)
+isReleaseCandidate=0
+if [[ "$codeVersion" == *"rc"* ]]; then
+  isReleaseCandidate=1
+fi
+echo "# isReleaseCandidate(${isReleaseCandidate})"
+
 # make sure LCD is on (default for fatpack)
 /home/admin/config.scripts/blitz.display.sh set-display lcd
 
@@ -73,6 +81,16 @@ echo "# defaultWEBUIuser(${defaultWEBUIuser})"
 echo "# defaultWEBUIrepo(${defaultWEBUIrepo})"
 sleep 3
 
+if [ "${defaultAPIuser}" == "" ] || [ "${defaultAPIrepo}" == "" ]; then
+  echo "FAIL: missing defaultAPIuser or defaultAPIrepo"
+  exit 1
+fi
+
+if [ "${defaultWEBUIuser}" == "" ] || [ "${defaultWEBUIrepo}" == "" ]; then
+  echo "FAIL: missing defaultWEBUIuser or defaultWEBUIrepo"
+  exit 1
+fi
+
 echo "* Adding nodeJS Framework ..."
 /home/admin/config.scripts/bonus.nodejs.sh on || exit 1
 
@@ -92,10 +110,19 @@ sudo -u admin curl -H "Accept: application/json; indent=4" https://bitnodes.io/a
 # Fallback Nodes List from Bitcoin Core
 sudo -u admin curl https://raw.githubusercontent.com/bitcoin/bitcoin/master/contrib/seeds/nodes_main.txt -o /home/admin/fallback.bitcoin.nodes
 
-echo "* Adding Raspiblitz API ..."
-sudo /home/admin/config.scripts/blitz.web.api.sh on "${defaultAPIuser}" "${defaultAPIrepo}" "blitz-${branch}" || exit 1
-echo "* Adding Raspiblitz WebUI ..."
-sudo /home/admin/config.scripts/blitz.web.ui.sh on "${defaultWEBUIuser}" "${defaultWEBUIrepo}" "release/${branch}" || exit 1
+# use dev branch when its an Release Candidate
+if [ "${isReleaseCandidate}" == "1" ]; then
+  echo "# RELEASE CANDIDATE: using development branches for WebUI & API"
+  echo "* Adding Raspiblitz API (a)..."
+  sudo /home/admin/config.scripts/blitz.web.api.sh on "${defaultAPIuser}" "${defaultAPIrepo}" "dev" || exit 1
+  echo "* Adding Raspiblitz WebUI (a) ..."
+  sudo /home/admin/config.scripts/blitz.web.ui.sh on "${defaultWEBUIuser}" "${defaultWEBUIrepo}" "master" || exit 1
+else
+  echo "* Adding Raspiblitz API (b) ..."
+  sudo /home/admin/config.scripts/blitz.web.api.sh on "${defaultAPIuser}" "${defaultAPIrepo}" "blitz-${branch}" || exit 1
+  echo "* Adding Raspiblitz WebUI (b) ..."
+  sudo /home/admin/config.scripts/blitz.web.ui.sh on "${defaultWEBUIuser}" "${defaultWEBUIrepo}" "release/${branch}" || exit 1
+fi
 
 # set build code as new www default
 sudo rm -r /home/admin/assets/nginx/www_public
@@ -120,6 +147,3 @@ echo "* Adding Code&Compile for WEBUI-APP: MEMPOOL"
 /home/admin/config.scripts/bonus.mempool.sh install || exit 1
 echo "* Adding Code&Compile for WEBUI-APP: ELECTRS"
 /home/admin/config.scripts/bonus.electrs.sh install || exit 1
-
-# set default display to LCD
-sudo /home/admin/config.scripts/blitz.display.sh set-display lcd

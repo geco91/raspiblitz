@@ -1,5 +1,5 @@
-variable "iso_name" { default = "debian-12.5.0-amd64-netinst.iso" }
-variable "iso_checksum" { default = "013f5b44670d81280b5b1bc02455842b250df2f0c6763398feb69af1a805a14f" }
+variable "iso_name" { default = "debian-12.7.0-amd64-netinst.iso" }
+variable "iso_checksum" { default = "8fde79cfc6b20a696200fc5c15219cf6d721e8feb367e9e0e33a79d1cb68fa83" }
 
 variable "pack" { default = "lean" }
 variable "github_user" { default = "raspiblitz" }

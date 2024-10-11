@@ -151,7 +151,7 @@ function release() {
   echo "- shutdown"
   confirmMsg release
   if [ $confirm -eq 1 ]; then
-    /home/admin/config.scripts/blitz.preparerelease.sh
+    /home/admin/config.scripts/blitz.preparerelease.sh $1
   fi
 }
 
@@ -161,6 +161,8 @@ function fatpack() {
   confirmMsg fatpack
   if [ $confirm -eq 1 ]; then
     sudo /home/admin/config.scripts/blitz.fatpack.sh
+    # raspberry pi fatpack has lcd display be default
+    sudo /home/admin/config.scripts/blitz.display.sh set-display lcd
   fi
 }
 
@@ -357,8 +359,8 @@ function bos() {
 # switch to the pyblock user for PyBLOCK
 function pyblock() {
   if [ $(grep -c "pyblock=on" < /mnt/hdd/raspiblitz.conf) -eq 1 ]; then
-    cd /home/pyblock
-    sudo -u pyblock /home/pyblock/.local/bin/pyblock
+    cd /home/pyblock/pyblock
+    sudo -u pyblock poetry run python -m pybitblock.console
   else
     echo "PyBlock is not installed - to install run:"
     echo "/home/admin/config.scripts/bonus.pyblock.sh on"

@@ -30,6 +30,8 @@ if [ ${#helipad} -eq 0 ]; then helipad="off"; fi
 if [ ${#lightningtipbot} -eq 0 ]; then lightningtipbot="off"; fi
 if [ ${#fints} -eq 0 ]; then fints="off"; fi
 if [ ${#lndk} -eq 0 ]; then lndk="off"; fi
+if [ ${#labelbase} -eq 0 ]; then labelbase="off"; fi
+if [ ${#publicpool} -eq 0 ]; then publicpool="off"; fi
 
 # show select dialog
 echo "run dialog ..."
@@ -46,6 +48,8 @@ if [ "${network}" == "bitcoin" ]; then
   OPTIONS+=(ja 'BTC JoinMarket+JoininBox menu' ${joinmarket})
   OPTIONS+=(za 'BTC Jam (JoinMarket WebUI)' ${jam})
   OPTIONS+=(wa 'BTC Download Bitcoin Whitepaper' ${whitepaper})
+  OPTIONS+=(ls 'BTC Labelbase' ${labelbase})
+  OPTIONS+=(pp 'BTC Publicpool (Solo Mining)' ${publicpool})  
 fi
 
 # available for both LND & c-lightning
@@ -63,7 +67,6 @@ if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
   OPTIONS+=(oa 'LND Balance of Satoshis' ${bos})
   OPTIONS+=(ya 'LND PyBLOCK' ${pyblock})
   OPTIONS+=(ha 'LND ChannelTools (Fund Rescue)' ${chantools})
-  OPTIONS+=(xa 'LND Sphinx-Relay' ${sphinxrelay})
   OPTIONS+=(fa 'LND Helipad Boostagram reader' ${helipad})
   OPTIONS+=(lb 'LND LNDK (experimental BOLT 12)' ${lndk})
 fi
@@ -132,7 +135,7 @@ if [ "${crtlWebinterface}" != "${choice}" ]; then
   errorOnInstall=$?
   if [ "${choice}" =  "on" ]; then
     if [ ${errorOnInstall} -eq 0 ]; then
-      sudo systemctl start RTL
+      sudo systemctl start cRTL
       echo "waiting 10 secs .."
       sleep 10
       /home/admin/config.scripts/bonus.rtl.sh menu cl mainnet
@@ -253,6 +256,17 @@ choice="off"; check=$(echo "${CHOICES}" | grep -c "pa")
 if [ ${check} -eq 1 ]; then choice="on"; fi
 if [ "${BTCPayServer}" != "${choice}" ]; then
   echo "BTCPayServer setting changed .."
+
+  #4049 warn if system has less than 8GB RAM
+  ramGB=$(free -g | awk '/^Mem:/{print $2}')
+  if [ "${choice}" =  "on" ] && [ ${ramGB} -lt 7 ]; then
+    whiptail --title "Your RaspiBlitz has less than the recommended 8GB of RAM to run BTCPayServer.\nDo you really want to proceed?" 10 50 --defaultno --yes-button "Continue" --no-button "Cancel"
+    if [ $? -eq 1 ]; then
+      # if user choosed CANCEL just null the choice
+      choice=""
+    fi
+  fi
+
   # check if TOR is installed
   source /mnt/hdd/raspiblitz.conf
   if [ "${choice}" =  "on" ] && [ "${runBehindTor}" = "off" ]; then
@@ -449,25 +463,6 @@ else
   echo "LNDg unchanged."
 fi
 
-# Sphinx Relay
-choice="off"; check=$(echo "${CHOICES}" | grep -c "xa")
-if [ ${check} -eq 1 ]; then choice="on"; fi
-if [ "${sphinxrelay}" != "${choice}" ]; then
-  echo "Sphinx-Relay Setting changed .."
-  anychange=1
-  sudo -u admin /home/admin/config.scripts/bonus.sphinxrelay.sh ${choice}
-  if [ "${choice}" =  "on" ]; then
-    echo "Giving service 1 minute to start up ... (please wait) ..."
-    sleep 60
-    whiptail --title " Installed Sphinx Server" --msgbox "\
-Sphinx Server was installed.\n
-Use the new 'SPHINX' entry in Main Menu for more info.\n
-" 10 35
-  fi
-else
-  echo "Sphinx Relay unchanged."
-fi
-
 # Helipad
 choice="off"; check=$(echo "${CHOICES}" | grep -c "fa")
 if [ ${check} -eq 1 ]; then choice="on"; fi
@@ -598,6 +593,37 @@ if [ "${whitepaper}" != "${choice}" ]; then
 else
   echo "Whitepaper setting unchanged."
 fi
+
+# labelbase process choice
+choice="off"; check=$(echo "${CHOICES}" | grep -c "ls")
+if [ ${check} -eq 1 ]; then choice="on"; fi
+if [ "${labelbase}" != "${choice}" ]; then
+  echo "Labelbase setting changed .."
+  anychange=1
+  sudo -u admin /home/admin/config.scripts/bonus.labelbase.sh ${choice}
+  source /mnt/hdd/raspiblitz.conf
+  if [ "${labelbase}" =  "on" ]; then
+    sudo -u admin /home/admin/config.scripts/bonus.labelbase.sh menu
+  fi
+else
+  echo "Labelbase setting unchanged."
+fi
+
+# publicpool process choice
+choice="off"; check=$(echo "${CHOICES}" | grep -c "pp")
+if [ ${check} -eq 1 ]; then choice="on"; fi
+if [ "${publicpool}" != "${choice}" ]; then
+  echo "Publicpool setting changed .."
+  anychange=1
+  sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh ${choice}
+  source /mnt/hdd/raspiblitz.conf
+  if [ "${publicpool}" =  "on" ]; then
+    sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh menu
+  fi
+else
+  echo "Publicpool setting unchanged."
+fi
+
 
 # fints process choice  
 choice="off"; check=$(echo "${CHOICES}" | grep -c "fn")

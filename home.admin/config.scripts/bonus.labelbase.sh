@@ -1,45 +1,30 @@
 #!/bin/bash
+# path: /home/admin/config.scripts/bonus.labelbase.sh
+APPID="labelbase"
+VERSION="2.2.2"
+GITHUB_REPO="https://github.com/Labelbase/Labelbase/"
+GITHUB_TAG="2.2.2"
+GITHUB_SIGN_AUTHOR=""
+GITHUB_SIGN_PUBKEYLINK=""
+GITHUB_SIGN_FINGERPRINT=""
 
-# This is a template bonus script you can use to add your own app to RaspiBlitz.
-# So just copy it within the `/home.admin/config.scripts` directory and
-# rename it for your app - example: `bonus.myapp.sh`.
-# Then go thru this script and delete parts/comments you dont need or add
-# needed configurations.
+# Basic variables
+LABELBASE_HOME="/home/${APPID}/"
+LABELBASE_DJANGO="/${LABELBASE_HOME}/${APPID}/django/"
+LABELBASE_ENV="${LABELBASE_HOME}ENV/"
 
-# id string of your app (short single string unique in raspiblitz)
-# should be same as used in name if script
-APPID="template" # one-word lower-case no-specials
-
-# clean human readable version - will be displayed in UI
-# just numbers only separated by dots (2 or 0.1 or 1.3.4 or 3.4.5.2)
-VERSION="0.1"
-
-# the git repo to get the source code from for install
-GITHUB_REPO="https://github.com/rootzoll/webapp-template"
-
-# the github tag of the version of the source code to install
-# can also be a commit hash
-# if empty it will use the latest source version
-GITHUB_TAG="v0.1"
-
-# the github signature to verify the author
-# leave GITHUB_SIGN_AUTHOR empty to skip verifying
-GITHUB_SIGN_AUTHOR="web-flow"
-GITHUB_SIGN_PUBKEYLINK="https://github.com/web-flow.gpg"
-GITHUB_SIGN_FINGERPRINT="(4AEE18F83AFDEB23|B5690EEEBB952194)"
-
-# port numbers the app should run on
-# delete if not an web app
-PORT_CLEAR="12345"
-PORT_SSL="12346"
-PORT_TOR_CLEAR="12347"
-PORT_TOR_SSL="12348"
+PORT_CLEAR="8089"
+PORT_SSL="12349"
+PORT_TOR_CLEAR="12350"
+PORT_TOR_SSL="12351"
 
 # BASIC COMMANDLINE OPTIONS
 # you can add more actions or parameters if needed - for example see the bonus.rtl.sh
 # to see how you can deal with an app that installs multiple instances depending on
 # lightning implementation or testnets - but this should be OK for a start:
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
+  echo "config script to install, update or uninstall Labelbase"
+  echo "bonus.labelbase.sh [on|off|menu|update|status]"
   echo "# bonus.${APPID}.sh status    -> status information (key=value)"
   echo "# bonus.${APPID}.sh on        -> install the app"
   echo "# bonus.${APPID}.sh off       -> uninstall the app"
@@ -53,6 +38,14 @@ echo "# Running: 'bonus.${APPID}.sh $*'"
 
 # check & load raspiblitz config
 source /mnt/hdd/raspiblitz.conf
+
+if [ -f "${LABELBASE_HOME}/exports.sh" ]; then
+  echo "INFO: The file '${LABELBASE_HOME}/exports.sh' already exists."
+  source ${LABELBASE_HOME}/exports.sh
+fi
+
+
+
 
 #########################
 # INFO
@@ -119,10 +112,9 @@ if [ "$1" = "menu" ]; then
 
   # basic info text - for an web app how to call with http & self-signed https
   dialogText="Open in your local web browser:
-http://${localIP}:${PORT_CLEAR}\n
-https://${localIP}:${PORT_SSL} with Fingerprint:
+https://${localIP}:${PORT_SSL}\n
+with Fingerprint:
 ${fingerprint}\n
-Use your Password B to login.\n
 "
 
   # add tor info (if available)
@@ -140,6 +132,7 @@ fi
 # ON / INSTALL
 ##########################
 
+
 # This section takes care of installing the app.
 # The template contains some basic steps but also look at other install scripts
 # to see how special cases are solved.
@@ -154,8 +147,6 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
   echo "# Installing ${APPID} ..."
 
-  # check and install NodeJS - if already installed it will skip
-  /home/admin/config.scripts/bonus.nodejs.sh on
 
   # create a dedicated user for the app
   # BACKGROUND is here to separate running apps by unix users
@@ -167,12 +158,13 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   # copy the skeleton files for login
   sudo -u ${APPID} cp -r /etc/skel/. /home/${APPID}/
 
+
   # add user to special groups with special access rights
   # BACKGROUND there are some unix groups available that will give the access to
   # like for example to the lnd admin macaroons - to check all groups available use:
   # `cut -d: -f1 /etc/group | sort` command on raspiblitz commandline
-  echo "# add use to special groups"
-  sudo /usr/sbin/usermod --append --groups lndadmin ${APPID}
+  #echo "# add use to special groups"
+  #sudo /usr/sbin/usermod --append --groups lndadmin ${APPID}
 
   # create a data directory on /mnt/hdd/app-data/ for the app
   # BACKGROUND is that any critical data that needs to survive an update should
@@ -194,10 +186,19 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
 
   fi
 
-  # make sure needed debian packages are installed
-  # 'fbi' is here just an example - change to what you need or delete
   echo "# install from source code"
-  sudo apt install -y fbi
+  # make sure mysql/myria db is available & running
+  sudo apt-get install -y mariadb-server mariadb-client
+  sudo apt-get install -y \
+      default-libmysqlclient-dev \
+      build-essential \
+      cron vim logrotate \
+      libpcre3-dev \
+      default-mysql-client \
+      python3-pip \
+      virtualenv
+  sudo systemctl enable mariadb 2>/dev/null
+  sudo systemctl start mariadb 2>/dev/null
 
   # download source code and verify
   # BACKGROUND is that now you download the code from github, reset to a given version tag/commit,
@@ -214,17 +215,52 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
      "${GITHUB_SIGN_AUTHOR}" "${GITHUB_SIGN_PUBKEYLINK}" "${GITHUB_SIGN_FINGERPRINT}" "${GITHUB_TAG}" || exit 1
   fi
 
+
+
   # compile/install the app
   # BACKGROUND on this example is a web app that compiles with NodeJS. But of course
   # your app could have a complete other way to install - check other install scripts as examples.
   echo "# compile/install the app"
-  cd /home/${APPID}/${APPID}
-  sudo -u ${APPID} npm install --only=prod --logLevel warn
-  if ! [ $? -eq 0 ]; then
-      echo "# FAIL - npm install did not run correctly - deleting code & exit"
-      sudo rm -r /home/${APPID}/${APPID}
-      exit 1
+  sudo pip install --upgrade pip
+  sudo -u ${APPID} virtualenv -p python3 ${LABELBASE_ENV}
+  sudo -u ${APPID}  bash -c '. /home/labelbase/ENV/bin/activate && pip install --no-cache-dir -r /home/labelbase/labelbase/django/requirements.txt'
+
+  if [ -f "${LABELBASE_HOME}/exports.sh" ]; then
+    echo "INFO: The file '${LABELBASE_HOME}/exports.sh' already exists (232)."
+  else
+    sudo touch ${LABELBASE_HOME}/exports.sh
+    sudo chown ${APPID}:${APPID} ${LABELBASE_HOME}/exports.sh
+    sudo chmod 755 ${LABELBASE_HOME}/exports.sh
+    generate_password() {
+        openssl rand -base64 "${1:-16}" | tr -d '+/' | fold -w "${1:-16}" | head -n 1
+    }
+    MYSQL_PASSWORD=$(generate_password 32)
+    sudo -u ${APPID} bash -c "echo 'export MYSQL_PASSWORD=${MYSQL_PASSWORD}' > /home/labelbase/exports.sh"
+
+
   fi
+  source ${LABELBASE_HOME}/exports.sh
+
+
+  isActive=$(sudo ls /etc/systemd/system/${APPID}.service 2>/dev/null | grep -c '${APPID}.service')
+  if [ ${isActive} -eq 0 ]; then
+    sudo mariadb -e "DROP DATABASE IF EXISTS labelbase;"
+    sudo mariadb -e "CREATE DATABASE labelbase;"
+    sudo mariadb -e "CREATE USER 'ulabelbase'@'%' IDENTIFIED BY '$MYSQL_PASSWORD';"
+    sudo mariadb -e "GRANT ALL PRIVILEGES ON labelbase.* TO 'ulabelbase' IDENTIFIED BY '$MYSQL_PASSWORD';"
+    sudo mariadb -e "FLUSH PRIVILEGES;"
+  fi
+
+#  cd ${LABELBASE_DJANGO}
+
+#  sudo -u ${APPID}  bash -c '. /home/labelbase/ENV/bin/activate && . /home/labelbase/exports.sh && /home/labelbase/labelbase/django/run.sh'
+
+  #sudo -u ${APPID} npm install --only=prod --logLevel warn
+  #if ! [ $? -eq 0 ]; then
+#      echo "# FAIL - npm install did not run correctly - deleting code & exit"
+#      sudo rm -r /home/${APPID}/${APPID}
+#      exit 1
+#  fi
 
   # open the ports in the firewall
   echo "# updating Firewall"
@@ -246,7 +282,7 @@ After=bitcoind
 WorkingDirectory=/home/${APPID}
 Environment=\"HOME_PATH=/mnt/hdd/app-data/${APPID}\"
 ExecStartPre=-/home/admin/config.scripts/bonus.${APPID}.sh prestart
-ExecStart=/usr/bin/node /home/${APPID}/${APPID}/${APPID}
+ExecStart=/home/admin/config.scripts/bonus.${APPID}.sh start
 User=${APPID}
 Restart=always
 TimeoutSec=120
@@ -271,10 +307,13 @@ WantedBy=multi-user.target
     /home/admin/config.scripts/tor.onion-service.sh ${APPID} 80 ${PORT_TOR_CLEAR} 443 ${PORT_TOR_SSL}
   fi
 
+
+
+
   # nginx configuration
   # BACKGROUND is that the plain HTTP is served by your web app, but thru the nginx proxy it will be available
   # with (self-signed) HTTPS and with separate configs for Tor & Tor+HTTPS.
-  
+
   echo "# setup nginx confing"
 
   # write the HTTPS config
@@ -291,30 +330,69 @@ server {
         proxy_pass http://127.0.0.1:${PORT_CLEAR};
         include /etc/nginx/snippets/ssl-proxy-params.conf;
     }
+    location /static {
+        autoindex off;
+        index index.html;
+        root /home/labelbase/labelbase/django;
+        break;
+    }
+    location /media {
+        autoindex off;
+        index index.html;
+        root /home/labelbase/labelbase/django;
+        break;
+    }
+    location /attachments/attachment {
+        autoindex off;
+        index index.html;
+        root /home/labelbase/labelbase/django;
+        break;
+    }
 }
 " | sudo tee /etc/nginx/sites-available/${APPID}_ssl.conf
   sudo ln -sf /etc/nginx/sites-available/${APPID}_ssl.conf /etc/nginx/sites-enabled/
 
-  # write the Tor config
   echo "
-server {
-    listen ${PORT_TOR_CLEAR};
-    server_name _;
-    access_log /var/log/nginx/access_${APPID}.log;
-    error_log /var/log/nginx/error_${APPID}.log;
-    location / {
-        proxy_pass http://127.0.0.1:${PORT_CLEAR};
-        include /etc/nginx/snippets/ssl-proxy-params.conf;
-    }
-}
-" | sudo tee /etc/nginx/sites-available/${APPID}_tor.conf
+  server {
+      listen ${PORT_TOR_CLEAR};
+      server_name localhost;
+      access_log /var/log/nginx/access_${APPID}.log;
+      error_log /var/log/nginx/error_${APPID}.log;
+      location / {
+          proxy_pass http://127.0.0.1:${PORT_CLEAR};
+          include /etc/nginx/snippets/ssl-proxy-params.conf;
+      }
+      location /static {
+          autoindex off;
+          index index.html;
+          root /home/labelbase/labelbase/django;
+          break;
+      }
+      location /media {
+          autoindex off;
+          index index.html;
+          root /home/labelbase/labelbase/django;
+          break;
+      }
+      location /attachments/attachment {
+          autoindex off;
+          index index.html;
+          root /home/labelbase/labelbase/django;
+          break;
+      }
+      error_page 500 502 503 504 /50x.html;
+      location = /50x.html {
+          root /usr/share/nginx/html;
+      }
+  }
+  " | sudo tee /etc/nginx/sites-available/${APPID}_tor.conf
   sudo ln -sf /etc/nginx/sites-available/${APPID}_tor.conf /etc/nginx/sites-enabled/
 
   # write the Tor+HTTPS config
   echo "
 server {
     listen ${PORT_TOR_SSL} ssl;
-    server_name _;
+    server_name localhost;
     include /etc/nginx/snippets/ssl-params.conf;
     include /etc/nginx/snippets/ssl-certificate-app-data-tor.conf;
     access_log /var/log/nginx/access_${APPID}.log;
@@ -322,6 +400,32 @@ server {
     location / {
         proxy_pass http://127.0.0.1:${PORT_CLEAR};
         include /etc/nginx/snippets/ssl-proxy-params.conf;
+    }
+
+    location /static {
+        autoindex off;
+        index index.html;
+        root /home/labelbase/labelbase/django;
+        break;
+    }
+
+    location /media {
+        autoindex off;
+        index index.html;
+        root /home/labelbase/labelbase/django;
+        break;
+    }
+
+    location /attachments/attachment {
+        autoindex off;
+        index index.html;
+        root /home/labelbase/labelbase/django;
+        break;
+    }
+
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
     }
 }
 " | sudo tee /etc/nginx/sites-available/${APPID}_tor_ssl.conf
@@ -374,6 +478,7 @@ server {
 
 fi
 
+
 ##########################
 # PRESTART
 ##########################
@@ -387,6 +492,27 @@ fi
 # again. If you dont need such "adhoc" config for your app - just leave it empty as it is, so
 # you maybe later on have the option to use it.
 
+if [ "$1" = "start" ]; then
+
+  if [ "$USER" != "${APPID}" ]; then
+    echo "# FAIL: run as user ${APPID}"
+    exit 1
+  fi
+
+  if [ -f "${LABELBASE_HOME}/exports.sh" ]; then
+    cd ${LABELBASE_DJANGO}
+    echo "LABELBASE_DJANGO, pwd is ${LABELBASE_DJANGO}"
+    #sudo -u ${APPID}  bash -c '
+    #source /home/labelbase/ENV/bin/activate && source /home/labelbase/exports.sh && /home/labelbase/labelbase/django/run_raspiblitz.sh
+    #'
+    source /home/labelbase/ENV/bin/activate && source /home/labelbase/exports.sh && /home/labelbase/ENV/bin/gunicorn labellabor.wsgi:application -b 0.0.0.0:${PORT_CLEAR} --reload
+
+  else
+    echo "Error: The file '${LABELBASE_HOME}/exports.sh' does not exists."
+  fi
+
+fi
+
 if [ "$1" = "prestart" ]; then
 
   # needs to be run as the app user - stop if not run as the app user
@@ -397,6 +523,19 @@ if [ "$1" = "prestart" ]; then
   fi
 
   echo "## PRESTART CONFIG START for ${APPID} (called by systemd prestart)"
+
+  if [ -f "${LABELBASE_HOME}/exports.sh" ]; then
+    cd ${LABELBASE_DJANGO}
+    source /home/labelbase/ENV/bin/activate
+    source /home/labelbase/exports.sh
+    python manage make_config
+    python manage.py makemigrations --noinput
+    python manage.py migrate --noinput
+    python manage.py collectstatic --noinput
+    python manage.py process_tasks &
+  else
+    echo "Error: The file '${LABELBASE_HOME}/exports.sh' does not exists."
+  fi
 
   # so if you have anything to configure before service starts, do it here
   echo "# no need for adhoc config needed so far"
@@ -431,6 +570,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
   sudo rm -f /etc/nginx/sites-available/${APPID}_tor_ssl.conf 2>/dev/null
   sudo nginx -t
   sudo systemctl reload nginx
+  echo "# removed nginx symlinks"
 
   echo "# close ports on firewall"
   sudo ufw deny "${PORT_CLEAR}"
@@ -451,7 +591,7 @@ if [ "$1" = "0" ] || [ "$1" = "off" ]; then
     sudo rm -r /mnt/hdd/app-data/${APPID}
   fi
 
-  echo "# OK - app should be uninstalled now"
+  echo "# OK - Labelbase should be uninstalled now"
   exit 0
 
 fi

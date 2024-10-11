@@ -61,6 +61,9 @@ echo "deprecatedrpc=addresses" >> /mnt/hdd/bitcoin/bitcoin.conf 2>/dev/null
 # backup SSH PubKeys
 /home/admin/config.scripts/blitz.ssh.sh backup
 
+# set timezone
+/home/admin/config.scripts/blitz.time.sh set-by-config >> ${logFile}
+
 # optimize mempool if RAM >1GB
 kbSizeRAM=$(cat /proc/meminfo | grep "MemTotal" | sed 's/[^0-9]*//g')
 if [ ${kbSizeRAM} -gt 1500000 ]; then
@@ -143,6 +146,8 @@ echo "allow: bitcoin testnet"
 ufw allow 18333 comment 'bitcoin testnet'
 echo "allow: bitcoin mainnet"
 ufw allow 8333 comment 'bitcoin mainnet'
+echo 'allow: bitcoin mainnet RPC'
+ufw allow 8332 comment 'bitcoin mainnet RPC'
 echo 'allow: lightning testnet'
 ufw allow 19735 comment 'lightning testnet'
 echo "allow: lightning mainnet"
@@ -219,7 +224,7 @@ echo "### RUNNING PROVISIONING SERVICES ###" >> ${logFile}
 
 # BITCOIN INTERIMS UPDATE
 if [ ${#bitcoinInterimsUpdate} -gt 0 ]; then
-  /home/admin/_cache.sh set message "Provisioning Bitcoin Core update"
+  /home/admin/_cache.sh set message "Bitcoin Core update"
   if [ "${bitcoinInterimsUpdate}" == "reckless" ]; then
     # recklessly update Bitcoin Core to latest release on GitHub
     echo "Provisioning Bitcoin Core reckless interims update" >> ${logFile}
@@ -363,15 +368,6 @@ else
     echo "Provisioning Tor - keep default" >> ${logFile}
 fi
 
-# AUTO PILOT
-if [ "${autoPilot}" = "on" ]; then
-    echo "Provisioning AUTO PILOT - run config script" >> ${logFile}
-    /home/admin/_cache.sh set message "Setup AutoPilot"
-    /home/admin/config.scripts/lnd.autopilot.sh on >> ${logFile} 2>&1
-else
-    echo "Provisioning AUTO PILOT - keep default" >> ${logFile}
-fi
-
 # NETWORK UPNP
 if [ "${networkUPnP}" = "on" ]; then
     echo "Provisioning NETWORK UPnP - run config script" >> ${logFile}
@@ -473,16 +469,6 @@ else
   echo "Provisioning BTCPayServer - keep default" >> ${logFile}
 fi
 
-# deprecated - see: #2031
-# LNDMANAGE
-#if [ "${lndmanage}" = "on" ]; then
-#  echo "Provisioning lndmanage - run config script" >> ${logFile}
-#  /home/admin/_cache.sh set message "Setup lndmanage"
-#  sudo -u admin /home/admin/config.scripts/bonus.lndmanage.sh on >> ${logFile} 2>&1
-#else
-#  echo "Provisioning lndmanage - not active" >> ${logFile}
-#fi
-
 # CUSTOM PORT
 echo "Provisioning LND Port" >> ${logFile}
 if [ ${#lndPort} -eq 0 ]; then
@@ -529,7 +515,7 @@ fi
 if [ "${#zerotier}" -gt 0 ] && [ "${zerotier}" != "off" ]; then
     echo "Provisioning ZeroTier - run config script" >> ${logFile}
     /home/admin/_cache.sh set message "Setup ZeroTier"
-    /home/admin/config.scripts/bonus.zerotier.sh on ${zerotier} >> ${logFile} 2>&1
+    /home/admin/config.scripts/internet.zerotier.sh on ${zerotier} >> ${logFile} 2>&1
 else
     echo "Provisioning ZeroTier - not active" >> ${logFile}
 fi
@@ -547,14 +533,14 @@ else
   echo "Provisioning LCD rotate - not needed, keep default rotate on" >> ${logFile}
 fi
 
-# TOUCHSCREEN
-if [ "${#touchscreen}" -gt 0 ]; then
-    echo "Provisioning Touchscreen - run config script" >> ${logFile}
-    /home/admin/_cache.sh set message "Setup Touchscreen"
-    /home/admin/config.scripts/blitz.touchscreen.sh ${touchscreen} >> ${logFile} 2>&1
-else
-    echo "Provisioning Touchscreen - not active" >> ${logFile}
-fi
+# TOUCHSCREEN - deactivated see https://github.com/raspiblitz/raspiblitz/pull/4609#issuecomment-2144406124
+# if [ "${#touchscreen}" -gt 0 ]; then
+#     echo "Provisioning Touchscreen - run config script" >> ${logFile}
+#     /home/admin/_cache.sh set message "Setup Touchscreen"
+#     /home/admin/config.scripts/blitz.touchscreen.sh ${touchscreen} >> ${logFile} 2>&1
+# else
+#     echo "Provisioning Touchscreen - not active" >> ${logFile}
+# fi
 
 # UPS
 if [ "${#ups}" -gt 0 ]; then
@@ -613,15 +599,6 @@ else
   echo "Provisioning Balance of Satoshis - keep default" >> ${logFile}
 fi
 
-## LNPROXY
-#if [ "${lnproxy}" = "on" ]; then
-#  echo "Provisioning lnproxy - run config script" >> ${logFile}
-#  /home/admin/_cache.sh set message "Setup lnproxy"
-#  sudo -u admin /home/admin/config.scripts/bonus.lnproxy.sh on >> ${logFile} 2>&1
-#else
-#  echo "Provisioning lnproxy - keep default" >> ${logFile}
-#fi
-
 # thunderhub
 if [ "${thunderhub}" = "on" ]; then
   echo "Provisioning ThunderHub - run config script" >> ${logFile}
@@ -644,7 +621,7 @@ fi
 if [ "${letsencrypt}" = "on" ]; then
   echo "Provisioning letsencrypt - run config script" >> ${logFile}
   /home/admin/_cache.sh set message "Setup letsencrypt"
-  sudo -u admin /home/admin/config.scripts/bonus.letsencrypt.sh on >> ${logFile} 2>&1
+  sudo -u admin /home/admin/config.scripts/internet.letsencrypt.sh on >> ${logFile} 2>&1
 else
   echo "Provisioning letsencrypt - keep default" >> ${logFile}
 fi
@@ -685,6 +662,15 @@ else
   echo "Provisioning LIT - keep default" >> ${logFile}
 fi
 
+# labelbase
+if [ "${labelbase}" = "on" ]; then
+  echo "Provisioning Labelbase - run config script" >> ${logFile}
+  /home/admin/_cache.sh set message "Setup Labelbase"
+  sudo -u admin /home/admin/config.scripts/bonus.labelbase.sh on >> ${logFile} 2>&1
+else
+  echo "Provisioning Labelbase - keep default" >> ${logFile}
+fi
+
 # lndg
 if [ "${lndg}" = "on" ]; then
   echo "Provisioning LNDg - run config script" >> ${logFile}
@@ -692,15 +678,6 @@ if [ "${lndg}" = "on" ]; then
   sudo -u admin /home/admin/config.scripts/bonus.lndg.sh on >> ${logFile} 2>&1
 else
   echo "Provisioning LNDg - keep default" >> ${logFile}
-fi
-
-# sphinxrelay
-if [ "${sphinxrelay}" = "on" ]; then
-  echo "Sphinx-Relay - run config script" >> ${logFile}
-  /home/admin/_cache.sh set message "Setup Sphinx-Relay"
-  sudo -u admin /home/admin/config.scripts/bonus.sphinxrelay.sh on >> ${logFile} 2>&1
-else
-  echo "Sphinx-Relay - keep default" >> ${logFile}
 fi
 
 # helipad
@@ -746,6 +723,33 @@ if [ "${fints}" = "on" ]; then
   sudo -u admin /home/admin/config.scripts/bonus.fints.sh on >> ${logFile} 2>&1
 else
   echo "Provisioning FinTS - keep default" >> ${logFile}
+fi
+
+# Tailscale
+if [ "${tailscale}" = "on" ]; then
+  echo "Provisioning Tailscale - run config script" >> ${logFile}
+  /home/admin/_cache.sh set message "Setup Tailscale"
+  sudo -u admin /home/admin/config.scripts/internet.tailscale.sh on >> ${logFile} 2>&1
+else
+  echo "Provisioning Tailscale - keep default" >> ${logFile}
+fi
+
+# Telegraf
+if [ "${telegraf}" = "on" ]; then
+  echo "Provisioning Telegraf - run config script" >> ${logFile}
+  /home/admin/_cache.sh set message "Setup Telegraf"
+  sudo -u admin /home/admin/config.scripts/bonus.telegraf.sh on >> ${logFile} 2>&1
+else
+  echo "Provisioning Telegraf - keep default" >> ${logFile}
+fi
+
+# Publipool
+if [ "${publicpool}" = "on" ]; then
+  echo "Provisioning Publicpool - run config script" >> ${logFile}
+  /home/admin/_cache.sh set message "Setup Publicpool"
+  sudo -u admin /home/admin/config.scripts/bonus.publicpool.sh on >> ${logFile} 2>&1
+else
+  echo "Provisioning Publicpool - keep default" >> ${logFile}
 fi
 
 # custom install script from user
@@ -797,6 +801,10 @@ fi
 echo "Start i2pd" >> ${logFile}
 /home/admin/_cache.sh set message "i2pd setup"
 /home/admin/config.scripts/blitz.i2pd.sh on >> ${logFile}
+
+# clean up raspiblitz config from old settings
+sed -i '/^autoPilot=/d' /mnt/hdd/raspiblitz.conf
+sed -i '/^lndKeysend=/d' /mnt/hdd/raspiblitz.conf
 
 # signal setup done
 /home/admin/_cache.sh set message "Setup Done"
