@@ -12,6 +12,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "-help" ];
   echo "RaspiBlitz Sync Scripts"
   echo "blitz.github.sh info"
   echo "blitz.github.sh [-run|-install|-justinstall] branch [repo]"
+  echo "blitz.github.sh sharedfolder [on|off]"
   exit 1
 fi
 
@@ -33,6 +34,40 @@ if [ "$1" == "info" ]; then
   echo "commitHashLong='${commitHashLong}'"
   echo "commitHashShort='${commitHashShort}'"
   exit 1
+fi
+
+if [ "$1" == "sharedfolder" ]; then
+
+  # check if folder /home/admin/raspiblitz_github exists
+  sharedFolderIsOn=$([ -d "/home/admin/raspiblitz_github" ] && echo "1" || echo "0")
+
+  if [ "$2" == "off" ]; then
+    if [ "${sharedFolderIsOn}" == "0" ]; then
+      echo "# Shared Folder is alraedy off"
+      exit 0
+    fi
+    sudo umount /home/admin/raspiblitz
+    sudo rm -r /home/admin/raspiblitz
+    mv /home/admin/raspiblitz_github /home/admin/raspiblitz
+    exit 0
+  fi 
+
+  if [ "${sharedFolderIsOn}" == "1" ]; then
+    echo "# Shared Folder is alraedy on"
+    exit 0
+  fi
+
+  # install dependencies (if not already installed)
+  sudo DEBIAN_FRONTEND=noninteractive apt install -y spice-webdavd davfs2 || exit 1
+  sudo sed -i 's/# *use_locks.*/use_locks 0/' /etc/davfs2/davfs2.conf
+  sudo sed -i 's/# *ask_auth.*/ask_auth 0/' /etc/davfs2/davfs2.conf
+  sudo systemctl restart spice-webdavd 2>/dev/null
+
+  # mount shared folder
+  mv /home/admin/raspiblitz /home/admin/raspiblitz_github
+  mkdir -p /home/admin/raspiblitz
+  sudo mount -t davfs http://localhost:9843/ /home/admin/raspiblitz || echo "# failed to mount shared folder - run: blitz.github.sh sharedfolder off" && exit 1
+  exit 0
 fi
 
 # change branch if set as parameter
