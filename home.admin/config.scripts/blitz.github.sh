@@ -46,7 +46,7 @@ if [ "$1" == "sharedfolder" ]; then
       echo "# Shared Folder is alraedy off"
       exit 0
     fi
-    sudo umount /home/admin/raspiblitz
+    sudo umount -f /home/admin/raspiblitz || echo "# failed to unmount shared folder" && exit 1
     sudo rm -r /home/admin/raspiblitz
     mv /home/admin/raspiblitz_github /home/admin/raspiblitz
     exit 0
