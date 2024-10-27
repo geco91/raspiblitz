@@ -66,7 +66,7 @@ if [ "$1" == "sharedfolder" ]; then
   read
 
   # install dependencies (if not already installed)
-  sudo DEBIAN_FRONTEND=noninteractive apt install -y spice-webdavd davfs2 || exit 1
+  sudo DEBIAN_FRONTEND=noninteractive apt install -y spice-webdavd davfs2
   sudo sed -i 's/# *use_locks.*/use_locks 0/' /etc/davfs2/davfs2.conf
   sudo sed -i 's/# *ask_auth.*/ask_auth 0/' /etc/davfs2/davfs2.conf
   sudo systemctl restart spice-webdavd 2>/dev/null
