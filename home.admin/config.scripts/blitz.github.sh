@@ -20,11 +20,21 @@ source /mnt/hdd/raspiblitz.conf 2>/dev/null
 
 cd /home/admin/raspiblitz
 
+# check if running shared folder
+sharedFolderIsOn=$(df | grep -c "/home/admin/raspiblitz")
+
 # gather info
-activeGitHubUser=$(sudo -u admin cat /home/admin/raspiblitz/.git/config 2>/dev/null | grep "url = " | cut -d "=" -f2 | cut -d "/" -f4)
-activeBranch=$(git branch 2>/dev/null | grep \* | cut -d ' ' -f2)
-commitHashLong=$(git log -n1 --format=format:"%H")
-commitHashShort=${commitHashLong:0:7}
+if [ ${sharedfolder} -eq 0 ]; then
+  activeGitHubUser=$(sudo -u admin cat /home/admin/raspiblitz/.git/config 2>/dev/null | grep "url = " | cut -d "=" -f2 | cut -d "/" -f4)
+  activeBranch=$(git branch 2>/dev/null | grep \* | cut -d ' ' -f2)
+  commitHashLong=$(git log -n1 --format=format:"%H")
+  commitHashShort=${commitHashLong:0:7}
+else
+  activeGitHubUser="local"
+  activeBranch="sharedfolder"
+  commitHashLong=""
+  commitHashShort=""
+fi
 
 # if parameter is "info" just give back basic info about sync
 if [ "$1" == "info" ]; then
@@ -37,9 +47,6 @@ if [ "$1" == "info" ]; then
 fi
 
 if [ "$1" == "sharedfolder" ]; then
-
-  # check if folder /home/admin/raspiblitz_github exists
-  sharedFolderIsOn=$([ -d "/home/admin/raspiblitz_github" ] && echo "1" || echo "0")
 
   if [ "$2" == "off" ]; then
     if [ "${sharedFolderIsOn}" == "0" ]; then
@@ -162,8 +169,10 @@ fi
 
 checkSumBlitzPyBefore=$(find /home/admin/raspiblitz/home.admin/BlitzPy -type f -exec md5sum {} \; | md5sum)
 checkSumBlitzTUIBefore=$(find /home/admin/raspiblitz/home.admin/BlitzTUI -type f -exec md5sum {} \; | md5sum)
-
-if [ ${vagrant} -eq 0 ]; then
+if [ ${sharedFolderIsOn} -eq 1 ]; then
+  echo "# *** SYNCING RASPIBLITZ CODE WITH SHARED FOLDER ***"
+  cd ..
+elif [ ${vagrant} -eq 0 ]; then
   origin=$(git remote -v | grep 'origin' | tail -n1)
   echo "# *** SYNCING RASPIBLITZ CODE WITH GITHUB ***"
   echo "# This is for developing on your RaspiBlitz."
