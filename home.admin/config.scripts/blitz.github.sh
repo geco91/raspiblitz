@@ -57,6 +57,14 @@ if [ "$1" == "sharedfolder" ]; then
     exit 0
   fi
 
+  # manual instrctions to user
+  echo "# PLEASE MAKE SURE VM IS PREPARED- in UTM:"
+  echo "# - in VM settings (VM might need to be off for changes)"
+  echo "# - under SHARED activate 'SPICE WebDAV'"
+  echo "# - set path to your local 'raspiblitz' project folder"
+  echo "# IF YOUR SURE ALL IS READY PRESS ENTER or CTRL+c to abort"
+  read
+
   # install dependencies (if not already installed)
   sudo DEBIAN_FRONTEND=noninteractive apt install -y spice-webdavd davfs2 || exit 1
   sudo sed -i 's/# *use_locks.*/use_locks 0/' /etc/davfs2/davfs2.conf
