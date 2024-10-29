@@ -4,12 +4,12 @@ Optimized now to run also on plain debian12 linux for Proxmox/VM & x86 systems.
 
 Download Release Candidates - RaspberryPi image:
 - Minimal:  
-https://raspiblitz.fulmo.org/images/raspiblitz-min-v1.11.3rc3-2024-10-18.img.gz  
-SHA-256-Checksum: 5cea51978c291a27e632aefd1fe2e9ba48566c731e95d744edd6ba1b084be884
+https://raspiblitz.fulmo.org/images/raspiblitz-min-v1.11.3rc4-2024-10-28.img.gz  
+SHA-256-Checksum: d39fbdf01c33034a577e5fea6b30fae5c99471d804658f45ec7006a04bf3be28
 
 - Fatpack:  
-https://raspiblitz.fulmo.org/images/raspiblitz-fat-v1.11.3rc3-2024-10-18.img.gz  
-SHA-256-Checksum: 2a6eff477bbad2a42bc43e484deff9442d97ea4aaa45e752356c8fdaa99d0d75
+https://raspiblitz.fulmo.org/images/raspiblitz-fat-v1.11.3rc4-2024-10-28.img.gz  
+SHA-256-Checksum: 7d76d0a8a895e0d295c47e97b7059feadaad209ae49961180c0df415d9e50d0b
 
 Containing Features:
 
