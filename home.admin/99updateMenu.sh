@@ -143,7 +143,7 @@ patch()
     fi
   fi
 
-  CHOICE=$(whiptail --clear --title " GitHub user:${activeGitHubUser} branch:${activeBranch} (${commitHashShort})" --menu "" 11 60 4 "${OPTIONS[@]}" 2>&1 >/dev/tty)
+  CHOICE=$(whiptail --clear --title " GitHub user:${activeGitHubUser} branch:${activeBranch} (${commitHashShort})" --menu "" 11 60 5 "${OPTIONS[@]}" 2>&1 >/dev/tty)
 
   clear
   case $CHOICE in
@@ -214,7 +214,6 @@ patch()
       ;;
     SHARED)
       clear
-      echo "..."
       if [ ${sharedFolderIsOn} -eq 0 ]; then
         echo "enable shared folder .."
         sudo /home/admin/config.scripts/blitz.github.sh sharedfolder on
