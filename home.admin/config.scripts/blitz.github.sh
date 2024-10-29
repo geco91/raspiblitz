@@ -86,7 +86,6 @@ if [ "$1" == "sharedfolder" ]; then
 fi
 
 # change branch if set as parameter
-vagrant=0
 clean=0
 install=0
 wantedBranch="$1"
@@ -95,12 +94,6 @@ if [ "${wantedBranch}" = "-run" ]; then
   # "-run" its just used by "patch" command and will ignore all further parameter
   wantedBranch="${activeBranch}"
   wantedGitHubUser="${activeGitHubUser}"
-  # detect if running in vagrant VM
-  vagrant=$(df | grep -c "/vagrant")
-  if [ "$2" = "git" ]; then 
-    echo "# forcing github over vagrant sync"
-    vagrant=0
-  fi
 fi
 if [ "${wantedBranch}" = "-install" ]; then
   install=1
@@ -114,8 +107,16 @@ if [ "${wantedBranch}" = "-justinstall" ]; then
   wantedGitHubUser=""
 fi
 
+# make sure github repo is unshallowed
+isShallow=$(git rev-parse --is-shallow-repositor)
+if [ "${isShallow}" = "true" ]; then
+  echo "# getting github history ..."
+  git config --global --add safe.directory /home/admin/raspiblitz
+  git fetch --unshallow || echo "# failed to unshallow github repo" && exit 1
+fi
+
 # set to another GutHub repo as origin
-if [ ${#wantedGitHubUser} -gt 0 ] && [ ${vagrant} -eq 0 ]; then
+if [ ${#wantedGitHubUser} -gt 0 ]; then
   echo "# your active GitHubUser is: ${activeGitHubUser}"
   echo "# your wanted GitHubUser is: ${wantedGitHubUser}"
   if [ "${activeGitHubUser}" = "${wantedGitHubUser}" ]; then
@@ -135,7 +136,7 @@ if [ ${#wantedGitHubUser} -gt 0 ] && [ ${vagrant} -eq 0 ]; then
   fi
 fi
 
-if [ ${#wantedBranch} -gt 0 ] && [ ${vagrant} -eq 0 ]; then
+if [ ${#wantedBranch} -gt 0 ]; then
   echo "# your active branch is: ${activeBranch}"
   echo "# your wanted branch is: ${wantedBranch}"
   if [ "${wantedBranch}" = "${activeBranch}" ]; then
@@ -172,7 +173,7 @@ checkSumBlitzTUIBefore=$(find /home/admin/raspiblitz/home.admin/BlitzTUI -type f
 if [ ${sharedFolderIsOn} -eq 1 ]; then
   echo "# *** SYNCING RASPIBLITZ CODE WITH SHARED FOLDER ***"
   cd ..
-elif [ ${vagrant} -eq 0 ]; then
+else
   origin=$(git remote -v | grep 'origin' | tail -n1)
   echo "# *** SYNCING RASPIBLITZ CODE WITH GITHUB ***"
   echo "# This is for developing on your RaspiBlitz."
@@ -184,18 +185,6 @@ elif [ ${vagrant} -eq 0 ]; then
   git config pull.rebase true
   git pull 1>&2
   cd ..
-else
-  cd ..
-  echo "# --> VAGRANT IS ACTIVE"
-  echo "# *** SYNCING RASPIBLITZ CODE WITH VAGRANT LINKED DIRECTORY ***"
-  echo "# This is for developing on your RaspiBlitz with a VM."
-  echo "# - delete /home/admin/raspiblitz"
-  sudo rm -r /home/admin/raspiblitz
-  sudo mkdir /home/admin/raspiblitz
-  echo "# - copy from vagrant new raspiblitz files (ignore hidden dirs)"
-  sudo cp -R /vagrant/* /home/admin/raspiblitz
-  echo "# - set admin as owner of files"
-  sudo chown admin:admin -R /home/admin/raspiblitz
 fi
 
 echo "# COPYING from GIT-Directory to /home/admin/"
