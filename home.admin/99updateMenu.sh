@@ -137,9 +137,9 @@ patch()
   sharedFolderIsOn=$(df | grep -c "/home/admin/raspiblitz")
   if [ "${vm}" = "1" ]; then
     if [ ${sharedFolderIsOn} -eq 0 ]; then
-      OPTIONS+=(SHARED "VM > Switch SharedFolder ON")
+      OPTIONS+=(SHARED "FOLDER --> ON")
     else
-      OPTIONS+=(SHARED "VM > Switch SharedFolder OFF")
+      OPTIONS+=(SHARED "FOLDER --> OFF")
     fi
   fi
 
