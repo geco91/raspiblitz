@@ -24,7 +24,7 @@ cd /home/admin/raspiblitz
 sharedFolderIsOn=$(df | grep -c "/home/admin/raspiblitz")
 
 # gather info
-if [ ${sharedfolder} -eq 0 ]; then
+if [ ${sharedFolderIsOn} -eq 0 ]; then
   activeGitHubUser=$(sudo -u admin cat /home/admin/raspiblitz/.git/config 2>/dev/null | grep "url = " | cut -d "=" -f2 | cut -d "/" -f4)
   activeBranch=$(git branch 2>/dev/null | grep \* | cut -d ' ' -f2)
   commitHashLong=$(git log -n1 --format=format:"%H")
