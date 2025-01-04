@@ -96,12 +96,12 @@ if [ "$1" = "explore" ]; then
   bootFromStorage=0
   bootFromSD=0
   if [ ${#systemDevice} -eq 0 ]; then
-    # if its a RaspberryPi with a USB drive - keep system drive empty and keep booting from SD
     if [ "${computerType}" = "raspberrypi" ] && [ ${gotNVMe} = "0" ]; then
+        # if its a RaspberryPi with a USB drive - keep system drive empty and keep booting from SD
         bootFromSD=1
     else
-      systemDevice=${storageDevice}
-      bootFromStorage=1
+        # all other like VM, RaspberryPi with a NVMe or a laptop - use the storage drive as system drive
+        bootFromStorage=1
     fi
   fi
 
@@ -112,7 +112,6 @@ if [ "$1" = "explore" ]; then
   # if there is no spereated data drive - run combine data & storage partitin
   combinedDataStorage=0
   if [ ${#dataDevice} -eq 0 ]; then
-      dataDevice=${storageDevice}
       combinedDataStorage=1
   fi
 
