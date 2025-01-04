@@ -51,12 +51,87 @@ if [ $? -eq 0 ]; then
   combinedDataStorage=1
 fi
 
-# output and exit if just status action
+###################
+# STATUS
+###################
+
 if [ "$1" = "status" ]; then
   echo "systemSetup='${systemSetup}'"
   if [ ${combinedDataStorage} -gt -1 ]; then
     echo "combinedDataStorage='${combinedDataStorage}'"
   fi
+  exit 0
+fi
+
+###################
+# EXPLORE
+# tempmount and 
+###################
+
+if [ "$1" = "explore" ]; then
+
+  if [ ${systemSetup} -gt 0 ]; then
+    echo "error='no explore on a system already setup'"
+    exit 1
+  fi
+
+  # get a list of all connected drives >63GB ordered by size (biggest first)
+  listOfDevices=$(lsblk -dno NAME,SIZE | grep -E "^(sd|nvme)" | \
+  awk '{ 
+    size=$2
+    if(size ~ /T/) { 
+      sub("T","",size); size=size*1024 
+    } else if(size ~ /G/) { 
+      sub("G","",size); size=size*1 
+    } else if(size ~ /M/) { 
+      sub("M","",size); size=size/1024 
+    }
+    if (size >= 63) printf "%s %.0f\n", $1, size
+    }' | sort -k2,2nr -k1,1 )
+
+  # take the biggest drive as the storage drive
+  storageDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
+  storageSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
+  
+  # take the second biggest drive as the system drive (only in VM setups)
+  systemDevice=$(echo "${listOfDevices}" | sed -n '2p' | awk '{print $1}')
+  systemSizeGB=$(echo "${listOfDevices}" | sed -n '2p' | awk '{print $2}')
+
+  # if there is no spereated system drive
+  bootFromStorage=0
+  bootFromSD=0
+  if [ ${#systemDevice} -eq 0 ]; then
+    # if its a RaspberryPi with a USB drive - keep system drive empty and keep booting from SD
+    if [ "${computerType}" = "raspberrypi" ] && [ ${gotNVMe} = "0" ]; then
+        bootFromSD=1
+    else
+      systemDevice=${storageDevice}
+      bootFromStorage=1
+    fi
+  fi
+
+  # take the third biggest drive as the data drive (only in VM setups)
+  dataDevice=$(echo "${listOfDevices}" | sed -n '3p' | awk '{print $1}')
+  dataSizeGB=$(echo "${listOfDevices}" | sed -n '3p' | awk '{print $2}')  
+
+  # if there is no spereated data drive - run combine data & storage partitin
+  combinedDataStorage=0
+  if [ ${#dataDevice} -eq 0 ]; then
+      dataDevice=${storageDevice}
+      combinedDataStorage=1
+  fi
+
+    # output the result
+    echo "storageDevice='${storageDevice}'"
+    echo "storageSizeGB='${storageSizeGB}'"
+    echo "systemDevice='${systemDevice}'"
+    echo "systemSizeGB='${systemSizeGB}'"
+    echo "dataDevice='${dataDevice}'"
+    echo "dataSizeGB='${dataSizeGB}'"
+    echo "combinedDataStorage='${combinedDataStorage}'"
+    echo "bootFromStorage='${bootFromStorage}'"
+    echo "bootFromSD='${bootFromSD}'"
+
   exit 0
 fi
 
