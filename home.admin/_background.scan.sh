@@ -107,7 +107,6 @@ echo "importing: _version.info"
 
 # get hardware info
 source <(/home/admin/config.scripts/blitz.hardware.sh status)
-/home/admin/_cache.sh set system_board "${board}"
 /home/admin/_cache.sh set system_ram_mb "${ramMB}"
 /home/admin/_cache.sh set system_ram_gb "${ramGB}"
 
