@@ -73,7 +73,7 @@ ramGB=$(awk '/MemTotal/ {printf( "%d\n", $2 / 950000 )}' /proc/meminfo)
 
 if [ "$1" = "status" ]; then
     echo "computerType='${computerType}'"
-    echo "computerVersion='${computerVersion}'"
+    echo "computerVersion=${computerVersion}"
     echo "ramMB=${ramMB}"
     echo "ramGB=${ramGB}"
     echo "gotNVMe=${gotNVMe}"
