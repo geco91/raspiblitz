@@ -70,11 +70,6 @@ fi
 
 if [ "$1" = "explore" ]; then
 
-  if [ ${systemSetup} -gt 0 ]; then
-    echo "error='no explore on a system already setup'"
-    exit 1
-  fi
-
   # get a list of all connected drives >63GB ordered by size (biggest first)
   listOfDevices=$(lsblk -dno NAME,SIZE | grep -E "^(sd|nvme)" | \
   awk '{ 
