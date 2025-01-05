@@ -110,6 +110,7 @@ if [ "$1" = "layout" ]; then
             size=$(echo "$line" | awk '{print $2}')
             
             # mount partition if not already mounted
+            needsUnmount=0
             mountPath=$(findmnt -n -o TARGET "/dev/${name}" 2>/dev/null)   
             if [ -z "${mountPath}" ]; then
                 # create temp mount point if not exists
@@ -285,15 +286,15 @@ if [ "$1" = "layout" ]; then
     # output the result
     echo "storageDevice='${storageDevice}'"
     echo "storageSizeGB='${storageSizeGB}'"
-    echo "storagePartition='${storageRecoverPartition}'"
+    echo "storagePartition='${storagePartition}'"
     echo "storageMountedPath='${storageMountedPath}'"
     echo "storageBlockchainGB='${storageBlockchainGB}'"
     echo "systemDevice='${systemDevice}'"
     echo "systemSizeGB='${systemSizeGB}'"
-    echo "systemPartition='${systemOldPartition}'"
+    echo "systemPartition='${systemPartition}'"
     echo "dataDevice='${dataDevice}'"
     echo "dataSizeGB='${dataSizeGB}'"
-    echo "dataPartition='${dataRecoverPartition}'"
+    echo "dataPartition='${dataPartition}'"
     echo "dataMountedPath='${dataMountedPath}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
