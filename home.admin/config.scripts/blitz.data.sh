@@ -1,13 +1,14 @@
 #!/bin/bash
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
- >&2 echo "# managing the data drive(s) with new bootable setups for RaspberryPi, VMs and Laptops"
- >&2 echo "# blitz.data.sh status [-inspect]  # auto detect the old/best drives to use for storage, system and data"
- >&2 echo "# blitz.data.sh setup STOARGE [device] combinedData=[0|1] bootFromStorage=[0|1]"
- >&2 echo "# blitz.data.sh setup SINGLE-DATA"
- >&2 echo "# blitz.data.sh setup SINGLE-SYSTEM"
- >&2 echo "# blitz.data.sh migration [umbrel|citadel|mynode] [partition] [-test] # will migrate partition to raspiblitz"
- echo "error='missing parameters'"
- exit 1
+    >&2 echo "# managing the data drive(s) with new bootable setups for RaspberryPi, VMs and Laptops"
+    >&2 echo "# blitz.data.sh status [-inspect] # auto detect the old/best drives to use for storage, system and data"
+    >&2 echo "# blitz.data.sh setup STOARGE [device] combinedData=[0|1] bootFromStorage=[0|1]"
+    >&2 echo "# blitz.data.sh setup SINGLE-DATA"
+    >&2 echo "# blitz.data.sh setup SINGLE-SYSTEM"
+    >&2 echo "# blitz.data.sh migration [umbrel|citadel|mynode] [partition] [-test] # will migrate partition to raspiblitz"
+    >&2 echo "# blitz.data.sh uasp-fix [-info] # deactivates UASP for non supported USB HDD Adapters"
+    echo "error='missing parameters'"
+    exit 1
 fi
 
 ###################
