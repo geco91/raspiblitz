@@ -90,12 +90,47 @@ if [ "$1" = "layout" ]; then
     }' | sort -k2,2n -k1,1)
     echo "ext4Partitions='${ext4Partitions}'"
 
+    # check if some drive is already mounted on /mnt/temp
+    mountPath=$(findmnt -n -o TARGET "/mnt/temp" 2>/dev/null)
+    if [ -n "${mountPath}" ]; then
+        echo "error='a drive already mounted on /mnt/temp'"
+        exit 1
+    fi
+
     # check every partition if it has data to recover
     while IFS= read -r line; do
         if [ -n "$line" ]; then
             name=$(echo "$line" | awk '{print $1}')
             size=$(echo "$line" | awk '{print $2}')
-            echo "# TODO Checking partition ${name} with size ${size}GB"
+            
+            # check if partition is mounted
+            mountPath=$(findmnt -n -o TARGET "/dev/${name}" 2>/dev/null)
+            
+            if [ -z "${mountPath}" ]; then
+                # create temp mount point if not exists
+                mkdir -p /mnt/temp 2>/dev/null
+                
+                # try to mount
+                if ! mount "/dev/${name}" /mnt/temp; then
+                    echo "error='cannot mount /dev/${name}'"
+                    continue
+                fi
+                mountPath="/mnt/temp"
+                needsUnmount=1
+            fi
+            
+            label=$(lsblk -no LABEL "/dev/${name}" 2>/dev/null)
+            echo "# Checking partition ${name} (${size}GB) mounted at ${mountPath} with label ${label}"
+
+            # Check STORAGE DRIVE
+            
+
+            
+            # cleanup if we mounted
+            if [ "${needsUnmount}" = "1" ]; then
+                umount /mnt/temp
+                rm -r /mnt/temp
+            fi
         fi
     done <<< "${ext4Partitions}"
 
