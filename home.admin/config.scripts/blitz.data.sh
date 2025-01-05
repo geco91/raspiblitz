@@ -147,16 +147,14 @@ if [ "$1" = "layout" ]; then
                 fi
 
                 # check blochain data
-                if [ -d "${mountPath}/blocks" ]; then
-                    storageBlockchainGB=$(du -s ${mountPath}/app-storage/bitcoin/blocks 2>/dev/null| awk '{printf "%.0f", $1/(1024*1024)}')
-                    if [ "${storageBlockchainGB}" = "" ]; then
+                storageBlockchainGB=$(du -s ${mountPath}/app-storage/bitcoin/blocks 2>/dev/null| awk '{printf "%.0f", $1/(1024*1024)}')
+                if [ "${storageBlockchainGB}" = "" ]; then
                         # check old location
                         storageBlockchainGB=$(du -s ${mountPath}/bitcoin/blocks 2>/dev/null| awk '{printf "%.0f", $1/(1024*1024)}')
-                    fi
-                    if [ "${storageBlockchainGB}" = "" ]; then
-                        # if nothing found - set to numeric 0
-                        storageBlockchainGB=0
-                    fi
+                fi
+                if [ "${storageBlockchainGB}" = "" ]; then
+                    # if nothing found - set to numeric 0
+                    storageBlockchainGB=0
                 fi
 
             # Check DATA DRIVE
