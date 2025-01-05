@@ -1,8 +1,8 @@
 #!/bin/bash
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  >&2 echo "# managing the data drive(s) with new bootable setups for RaspberryPi, VMs and Laptops"
- >&2 echo "# blitz.data.sh status"
- >&2 echo "# blitz.data.sh [tempmount|explore|unmount]"
+ >&2 echo "# blitz.data.sh status   # check if system is setup and what drives are used"
+ >&2 echo "# blitz.data.sh explore  # find the best drives to use for storage, system and data"
  >&2 echo "# blitz.data.sh setup"
  echo "error='missing parameters'"
  exit 1
@@ -65,14 +65,18 @@ fi
 
 ###################
 # EXPLORE
-# tempmount and 
+# find the best drives to use for storage, system and data
 ###################
 
 if [ "$1" = "explore" ]; then
 
-  # get a list of all connected drives >63GB ordered by size (biggest first)
-  listOfDevices=$(lsblk -dno NAME,SIZE | grep -E "^(sd|nvme)" | \
-  awk '{ 
+    # array of device names to exclude
+    alreadyUsedDevices=("sda")
+
+    # get a list of all connected drives >63GB ordered by size (biggest first)
+    listOfDevices=$(lsblk -dno NAME,SIZE | grep -E "^(sd|nvme)" | \
+    awk -v exclude="${alreadyUsedDevices[*]}" '{
+    split(exclude, excludeArray, " ")
     size=$2
     if(size ~ /T/) { 
       sub("T","",size); size=size*1024 
@@ -81,50 +85,57 @@ if [ "$1" = "explore" ]; then
     } else if(size ~ /M/) { 
       sub("M","",size); size=size/1024 
     }
-    if (size >= 63) printf "%s %.0f\n", $1, size
+    excludeDevice=0
+    for(i in excludeArray) {
+      if($1 == excludeArray[i]) {
+        excludeDevice=1
+        break
+      }
+    }
+    if (size >= 63 && excludeDevice == 0) printf "%s %.0f\n", $1, size
     }' | sort -k2,2nr -k1,1 )
 
-  # take the biggest drive as the storage drive
-  storageDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
-  storageSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
+    # take the biggest drive as the storage drive
+    _storageDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
+    _storageSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
   
-  # take the second biggest drive as the system drive (only in VM setups)
-  systemDevice=$(echo "${listOfDevices}" | sed -n '2p' | awk '{print $1}')
-  systemSizeGB=$(echo "${listOfDevices}" | sed -n '2p' | awk '{print $2}')
+    # take the second biggest drive as the system drive (only in VM setups)
+    _systemDevice=$(echo "${listOfDevices}" | sed -n '2p' | awk '{print $1}')
+    _systemSizeGB=$(echo "${listOfDevices}" | sed -n '2p' | awk '{print $2}')
 
-  # if there is no spereated system drive
-  bootFromStorage=0
-  bootFromSD=0
-  if [ ${#systemDevice} -eq 0 ]; then
-    if [ "${computerType}" = "raspberrypi" ] && [ ${gotNVMe} = "0" ]; then
-        # if its a RaspberryPi with a USB drive - keep system drive empty and keep booting from SD
-        bootFromSD=1
-    else
-        # all other like VM, RaspberryPi with a NVMe or a laptop - use the storage drive as system drive
-        bootFromStorage=1
+    # if there is no spereated system drive
+    _bootFromStorage=0
+    _bootFromSD=0
+    if [ ${#systemDevice} -eq 0 ]; then
+        if [ "${computerType}" = "raspberrypi" ] && [ ${gotNVMe} = "0" ]; then
+            # if its a RaspberryPi with a USB drive - keep system drive empty and keep booting from SD
+            _bootFromSD=1
+        else
+            # all other like VM, RaspberryPi with a NVMe or a laptop - use the storage drive as system drive
+            _bootFromStorage=1
+        fi
     fi
-  fi
 
-  # take the third biggest drive as the data drive (only in VM setups)
-  dataDevice=$(echo "${listOfDevices}" | sed -n '3p' | awk '{print $1}')
-  dataSizeGB=$(echo "${listOfDevices}" | sed -n '3p' | awk '{print $2}')  
+    # take the third biggest drive as the data drive (only in VM setups)
+    _dataDevice=$(echo "${listOfDevices}" | sed -n '3p' | awk '{print $1}')
+    _dataSizeGB=$(echo "${listOfDevices}" | sed -n '3p' | awk '{print $2}')  
 
-  # if there is no spereated data drive - run combine data & storage partitin
-  combinedDataStorage=0
-  if [ ${#dataDevice} -eq 0 ]; then
-      combinedDataStorage=1
-  fi
+    # if there is no spereated data drive - run combine data & storage partiton
+    _combinedDataStorage=0
+    if [ ${#dataDevice} -eq 0 ]; then
+        _combinedDataStorage=1
+    fi
 
     # output the result
-    echo "storageDevice='${storageDevice}'"
-    echo "storageSizeGB='${storageSizeGB}'"
-    echo "systemDevice='${systemDevice}'"
-    echo "systemSizeGB='${systemSizeGB}'"
-    echo "dataDevice='${dataDevice}'"
-    echo "dataSizeGB='${dataSizeGB}'"
-    echo "combinedDataStorage='${combinedDataStorage}'"
-    echo "bootFromStorage='${bootFromStorage}'"
-    echo "bootFromSD='${bootFromSD}'"
+    echo "_storageDevice='${storageDevice}'"
+    echo "_storageSizeGB='${storageSizeGB}'"
+    echo "_systemDevice='${systemDevice}'"
+    echo "_systemSizeGB='${systemSizeGB}'"
+    echo "_dataDevice='${dataDevice}'"
+    echo "_dataSizeGB='${dataSizeGB}'"
+    echo "_combinedDataStorage='${combinedDataStorage}'"
+    echo "_bootFromStorage='${bootFromStorage}'"
+    echo "_bootFromSD='${bootFromSD}'"
 
   exit 0
 fi
