@@ -198,10 +198,6 @@ do
 
   source <(/home/admin/_cache.sh valid \
     hdd_mounted \
-    hdd_ssd \
-    hdd_btrfs \
-    hdd_raid \
-    hdd_uasp \
     hdd_capacity_bytes \
     hdd_capacity_gb \
     hdd_free_bytes \
@@ -270,10 +266,6 @@ do
     echo "updating: /home/admin/config.scripts/blitz.datadrive.sh status"
     source <(/home/admin/config.scripts/blitz.datadrive.sh status)
     /home/admin/_cache.sh set hdd_mounted "${isMounted}"
-    /home/admin/_cache.sh set hdd_ssd "${isSSD}"
-    /home/admin/_cache.sh set hdd_btrfs "${isBTRFS}"
-    /home/admin/_cache.sh set hdd_raid "${isRaid}"
-    /home/admin/_cache.sh set hdd_uasp "${hddAdapterUSAP}"
     /home/admin/_cache.sh set hdd_capacity_bytes "${hddBytes}"
     /home/admin/_cache.sh set hdd_capacity_gb "${hddGigaBytes}"
     /home/admin/_cache.sh set hdd_free_bytes "${hddDataFreeBytes}"

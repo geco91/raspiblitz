@@ -624,6 +624,7 @@ if [ "$1" = "status" ]; then
     fi
     echo "hddAdapterUSAP=${hddAdapterUSAP}"
   fi
+
   echo
   echo "# RAID"
   echo "isRaid=${isRaid}"

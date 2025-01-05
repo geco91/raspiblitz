@@ -1,9 +1,11 @@
 #!/bin/bash
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  >&2 echo "# managing the data drive(s) with new bootable setups for RaspberryPi, VMs and Laptops"
- >&2 echo "# blitz.data.sh status             # check if system is setup and what drives are used"
- >&2 echo "# blitz.data.sh layout [-inspect]  # auto detect the old/best drives to use for storage, system and data"
- >&2 echo "# blitz.data.sh setup"
+ >&2 echo "# blitz.data.sh status [-inspect]  # auto detect the old/best drives to use for storage, system and data"
+ >&2 echo "# blitz.data.sh setup STOARGE [device] combinedData=[0|1] bootFromStorage=[0|1]"
+ >&2 echo "# blitz.data.sh setup SINGLE-DATA"
+ >&2 echo "# blitz.data.sh setup SINGLE-SYSTEM"
+ >&2 echo "# blitz.data.sh migration [umbrel|citadel|mynode] [partition] [-test] # will migrate partition to raspiblitz"
  echo "error='missing parameters'"
  exit 1
 fi
@@ -37,47 +39,21 @@ if [ ${#computerType} -eq 0 ]; then
   exit 1
 fi
 
-# when a drive is mounted on /mnt/data or /mnt/hdd assume the system was already setup
-systemSetup=0
-combinedDataStorage=-1
-mountpoint -q /mnt/data
-if [ $? -eq 0 ]; then
-  systemSetup=1
-  combinedDataStorage=0
-fi
-mountpoint -q /mnt/hdd
-if [ $? -eq 0 ]; then
-  systemSetup=1
-  combinedDataStorage=1
-fi
-
 ###################
 # STATUS
 ###################
 
 if [ "$1" = "status" ]; then
-  echo "systemSetup='${systemSetup}'"
-  if [ ${combinedDataStorage} -gt -1 ]; then
-    echo "combinedDataStorage='${combinedDataStorage}'"
-  fi
-  exit 0
-fi
 
-###################
-# LAYOUT
-# auto detect the old/best drives to use for storage, system and data
-###################
+    echo "# blitz.data.sh status"
 
-if [ "$1" = "layout" ]; then
-
-    echo "# blitz.data.sh layout"
-
+    # optional: parameter
     userWantsInspect=0
     if [ "$2" = "-inspect" ]; then
         userWantsInspect=1
     fi
 
-    # scenario could be: unknown, recover, fresh
+    # scenario could be: unknown, migration, recover, setup, ready
     scenario="unknown"
     storageBlockchainGB=0
     dataInspectDone=0
@@ -203,6 +179,22 @@ if [ "$1" = "layout" ]; then
                 systemDevice="${deviceName}"
                 systemSizeGB="${size}"
                 systemPartition="${name}"
+
+            # Check MIGRATION: UMBREL
+            elif [ -f "${mountPath}/umbrel/info.json" ]; then
+                echo "#  - UMBREL data detected - use 'blitz.data.sh migration'"
+                storageMigration="umbrel"
+
+            # Check MIGRATION: CITADEL
+            elif [ -f "${mountPath}/citadel/info.json" ]; then
+                echo "#  - CITADEL data detected - use 'blitz.data.sh migration'"
+                storageMigration="citadel"
+
+            # Check MIGRATION: MYNODE
+            elif [ -f "${mountPath}/mynode/bitcoin/bitcoin.conf" ]; then
+                echo "#  - MYNODE data detected - use 'blitz.data.sh migration'"
+                storageMigration="mynode"
+
             else
                 echo "#  - no data found on partition or too small"
             fi
@@ -333,6 +325,7 @@ if [ "$1" = "layout" ]; then
     echo "storagePartition='${storagePartition}'"
     echo "storageMountedPath='${storageMountedPath}'"
     echo "storageBlockchainGB='${storageBlockchainGB}'"
+    echo "storageMigration='${storageMigration}'"
     echo "systemDevice='${systemDevice}'"
     echo "systemSizeGB='${systemSizeGB}'"
     echo "systemPartition='${systemPartition}'"
@@ -346,8 +339,195 @@ if [ "$1" = "layout" ]; then
     echo "bootFromSD='${bootFromSD}'"
     echo "remainingDevices='${remainingDevices}'"
 
-  exit 0
+    exit 0
 fi
 
+###################
+# MIGRATION
+###################
 
+if [ "$1" = "migration" ]; then
 
+    echo "# blitz.data.sh migration"
+
+    # check if all needed parameters are set
+    if [ $# -lt 3 ]; then
+        echo "error='missing parameters'"
+        exit 1
+    fi
+
+    # check that partition exists
+    if ! lsblk -no NAME | grep -q "${dataPartition}$"; then
+        echo "# dataPartition(${dataPartition})"
+        echo "error='partition not found'"
+        exit 1
+    fi
+
+    # check that partition is not mounted
+    if findmnt -n -o TARGET "/dev/${dataPartition}" 2>/dev/null; then
+        echo "# dataPartition(${dataPartition})"
+        echo "# make sure the partition is not mounted"
+        echo "error='partition is mounted'"
+        exit 1
+    fi
+
+    onlyTestIfMigratioinPossible=0
+    if [ "$4" = "-test" ]; then
+        echo "# ... only testing if migration is possible"
+        onlyTestIfMigratioinPossible=1
+    fi
+
+    mountPath="/mnt/temp"
+    mkdir -p "${mountPath}" 2>/dev/null
+    if ! mount "/dev/${name}" "${mountPath}"; then
+        echo "error='cannot mount partition'"
+        exit 1
+    fi
+
+    #####################
+    # MIGRATION: UMBREL
+    if [ "$2" = "umbrel" ]; then
+
+        # TODO: Detect and output Umbrel Version
+
+        if [ ${onlyTestIfMigratioinPossible} -eq 1 ]; then
+            # provide information about the versions
+            btcVersion=$(grep "lncm/bitcoind" ${mountPath}/umbrel/app-data/bitcoin/docker-compose.yml 2>/dev/null | sed 's/.*bitcoind://' | sed 's/@.*//')
+            clnVersion=$(grep "lncm/clightning" ${mountPath}/umbrel/app-data/core-lightning/docker-compose.yml 2>/dev/null | sed 's/.*clightning://' | sed 's/@.*//')
+            lndVersion=$(grep "lightninglabs/lnd" ${mountPath}/umbrel/app-data/lightning/docker-compose.yml 2>/dev/null | sed 's/.*lnd://' | sed 's/@.*//')
+            echo "btcVersion='${btcVersion}'"
+            echo "clnVersion='${clnVersion}'"
+            echo "lndVersion='${lndVersion}'"
+        else
+
+            echo "error='TODO migration'"
+
+        fi
+
+    #####################
+    # MIGRATION: CITADEL
+    elif [ "$2" = "citadel" ]; then
+
+        # TODO: Detect and output Citadel Version
+
+        if [ ${onlyTestIfMigratioinPossible} -eq 1 ]; then
+            # provide information about the versions
+            lndVersion=$(grep "lightninglabs/lnd" ${mountPath}/citadel/docker-compose.yml 2>/dev/null | sed 's/.*lnd://' | sed 's/@.*//')
+            echo "lndVersion='${lndVersion}'"
+        else
+
+            echo "error='TODO migration'"
+
+        fi
+
+    #####################
+    # MIGRATION: MYNODE
+    elif [ "$2" = "mynode" ]; then
+
+        echo "error='TODO'"
+
+    else
+        echo "error='migration type not supported'"
+    fi
+
+    # unmount partition
+    umount ${mountPath}
+    rm -r ${mountPath}
+
+    exit 0
+fi
+
+#############
+# UASP-fix
+#############
+
+if [ "$1" = "uasp-fix" ]; then
+
+    echo "# blitz.data.sh uasp-fix"
+
+    # optional: parameter
+    onlyInfo=0
+    if [ "$2" = "-info" ]; then
+        echo
+        onlyInfo=1
+    fi
+
+    # check is running on RaspiOS
+    if [ "${computerType}" != "raspberrypi" ]; then
+        echo "error='only on RaspberryPi'"
+        exit 1
+    fi
+
+    # HDD Adapter UASP support --> https://www.pragmaticlinux.com/2021/03/fix-for-getting-your-ssd-working-via-usb-3-on-your-raspberry-pi/
+    hddAdapter=$(lsusb | grep "SATA" | head -1 | cut -d " " -f6)
+    if [ "${hddAdapter}" == "" ]; then
+      hddAdapter=$(lsusb | grep "GC Protronics" | head -1 | cut -d " " -f6)
+    fi
+    if [ "${hddAdapter}" == "" ]; then
+      hddAdapter=$(lsusb | grep "ASMedia Technology" | head -1 | cut -d " " -f6)
+    fi
+
+    # check if HDD ADAPTER is on UASP WHITELIST (tested devices)
+    hddAdapterUASP=0
+    if [ "${hddAdapter}" == "174c:55aa" ]; then
+      # UGREEN 2.5" External USB 3.0 Hard Disk Case with UASP support
+      hddAdapterUASP=1
+    fi
+    if [ "${hddAdapter}" == "174c:1153" ]; then
+      # UGREEN 2.5" External USB 3.0 Hard Disk Case with UASP support, 2021+ version
+      hddAdapterUASP=1
+    fi
+    if [ "${hddAdapter}" == "0825:0001" ] || [ "${hddAdapter}" == "174c:0825" ]; then
+      # SupTronics 2.5" SATA HDD Shield X825 v1.5
+      hddAdapterUASP=1
+    fi
+    if [ "${hddAdapter}" == "2109:0715" ]; then
+      # ICY BOX IB-247-C31 Type-C Enclosure for 2.5inch SATA Drives
+      hddAdapterUASP=1
+    fi
+    if [ "${hddAdapter}" == "174c:235c" ]; then
+      # Cable Matters USB 3.1 Type-C Gen2 External SATA SSD Enclosure
+      hddAdapterUASP=1
+    fi
+    if [ -f "/boot/firmware/uasp.force" ]; then
+      # or when user forces UASP by flag file on sd card
+      hddAdapterUASP=1
+    fi
+
+    if [ ${onlyInfo} -eq 1 ]; then
+        echo "# the ID of the HDD Adapter:"
+        echo "hddAdapter='${hddAdapter}'"
+        echo "# if HDD Adapter supports UASP:"
+        echo "hddAdapterUASP='${hddAdapterUASP}'"
+        exit 0
+    fi
+
+    # https://www.pragmaticlinux.com/2021/03/fix-for-getting-your-ssd-working-via-usb-3-on-your-raspberry-pi/
+    cmdlineFileExists=$(ls /boot/firmware/cmdline.txt 2>/dev/null | grep -c "cmdline.txt")
+    if [ ${cmdlineFileExists} -eq 0 ]; then
+        echo "error='no /boot/firmware/cmdline.txt'"
+        exit 1
+    elif [ ${#hddAdapter} -eq 0 ]; then
+        echo "# Skipping UASP deactivation - no USB HDD Adapter found"
+        echo "neededReboot=0"
+    elif [ ${hddAdapterUASP} -eq 1 ]; then
+        echo "# Skipping UASP deactivation - no USB HDD Adapter is on UASP WHITELIST"
+        echo "neededReboot=0"
+    else
+        echo "# UASP deactivation - because USB HDD Adapter is not on UASP WHITELIST ..."
+        usbQuirkDone=$(cat /boot/firmware/cmdline.txt | grep -c "usb-storage.quirks=${hddAdapter}:u")
+        if [ ${usbQuirkDone} -eq 0 ]; then
+            # remove any old usb-storage.quirks
+            sed -i "s/usb-storage.quirks=[^ ]* //g" /boot/firmware/cmdline.txt 2>/dev/null
+            # add new usb-storage.quirks
+            sed -i "s/^/usb-storage.quirks=${hddAdapter}:u /" /boot/firmware/cmdline.txt
+            # go into reboot to activate new setting
+            echo "# DONE deactivating UASP for ${hddAdapter}"
+            echo "neededReboot=1"
+        else
+            echo "# Already UASP deactivated for ${hddAdapter}"
+            echo "neededReboot=0"
+        fi
+    fi
+    exit 0
+fi

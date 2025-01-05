@@ -489,13 +489,25 @@ fi
 ################################
 # UASP FIX
 ################################
-/home/admin/_cache.sh set message "checking HDD"
-source <(/home/admin/config.scripts/blitz.datadrive.sh uasp-fix)
-if [ "${neededReboot}" == "1" ]; then
-  echo "UASP FIX applied ... reboot needed." >> $logFile
-  systemInitReboot=1
+
+# only if RaspberryPi
+if [ "${baseimage}" == "raspios_arm64" ]; then
+  /home/admin/_cache.sh set message "checking HDD"
+  source <(/home/admin/config.scripts/blitz.data.sh uasp-fix)
+  if [ "${error}" != "" ]; then
+    echo "UASP FIX failed: ${error}" >> $logFile
+    /home/admin/_cache.sh set state "errorUASP"
+    /home/admin/_cache.sh set message "${error}"
+    exit 1
+  fi
+  if [ "${neededReboot}" == "1" ]; then
+    echo "UASP FIX applied ... reboot needed." >> $logFile
+    systemInitReboot=1
+  else
+    echo "No UASP FIX needed" >> $logFile
+  fi
 else
-  echo "No UASP FIX needed" >> $logFile
+  echo "Not a RaspberryPi .. no UASP FIX needed." >> $logFile
 fi
 
 ######################################
