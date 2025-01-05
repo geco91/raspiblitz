@@ -160,7 +160,7 @@ if [ "$1" = "layout" ]; then
                 fi
 
             # Check DATA DRIVE
-            elif [ -d "${mountPath}/app-data" ]; then
+            elif [ -d "${mountPath}/app-data" ] && [ ${size} -gt 63 ]; then
 
                 # check for unclean setups
                 if [ -d "${mountPath}/app-storage" ]; then
@@ -179,7 +179,7 @@ if [ "$1" = "layout" ]; then
                 fi
 
             # Check SYSTEM DRIVE
-            elif [ -d "${mountPath}/boot" ] && [ -d "${mountPath}/sys" ]; then
+            elif [ -d "${mountPath}/boot" ] && [ -d "${mountPath}/sys" ] && [ ${size} -gt 63 ]; then
 
                 # check for unclean setups
                 if [ -d "${mountPath}/app-storage" ]; then
