@@ -279,8 +279,10 @@ if [ "$1" = "layout" ]; then
     fi
 
     # count remaining devices
-    remainingDevices=$(echo "${listOfDevices}" | wc -l)
-    echo "# ${listOfDevices}"
+    remainingDevices=0
+    if [ ${#listOfDevices} -gt 0 ]; then
+        remainingDevices=$(echo "${listOfDevices}" | wc -l)
+    fi
 
     # output the result
     echo "storageDevice='${storageDevice}'"
