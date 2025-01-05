@@ -72,28 +72,38 @@ if [ "$1" = "explore" ]; then
 
     # array of device names to exclude
     alreadyUsedDevices=("sda")
-
-    # get a list of all connected drives >63GB ordered by size (biggest first)
+    
+    # get a list of all connected drives >63GB ordered by size (biggest first) without already used devices
     listOfDevices=$(lsblk -dno NAME,SIZE | grep -E "^(sd|nvme)" | \
-    awk -v exclude="${alreadyUsedDevices[*]}" '{
-    split(exclude, excludeArray, " ")
-    size=$2
-    if(size ~ /T/) { 
-      sub("T","",size); size=size*1024 
-    } else if(size ~ /G/) { 
-      sub("G","",size); size=size*1 
-    } else if(size ~ /M/) { 
-      sub("M","",size); size=size/1024 
+    awk -v exclude="$(printf "%s|" "${alreadyUsedDevices[@]}" | sed 's/|$//')" '
+    BEGIN {
+        split(exclude, excludeArray, "|")
     }
-    excludeDevice=0
-    for(i in excludeArray) {
-      if($1 == excludeArray[i]) {
-        excludeDevice=1
-        break
-      }
-    }
-    if (size >= 63 && excludeDevice == 0) printf "%s %.0f\n", $1, size
-    }' | sort -k2,2nr -k1,1 )
+    {
+        size=$2
+        if(size ~ /T/) { 
+            sub("T","",size)
+            size=size*1024 
+        } else if(size ~ /G/) { 
+            sub("G","",size)
+            size=size*1 
+        } else if(size ~ /M/) { 
+            sub("M","",size)
+            size=size/1024 
+        }
+        
+        excludeDevice=0
+        for (dev in excludeArray) {
+            if ($1 == excludeArray[dev]) {
+                excludeDevice=1
+                break
+            }
+        }
+        
+        if (size >= 63 && excludeDevice == 0) {
+            printf "%s %.0f\n", $1, size
+        }
+    }' | sort -k2,2nr -k1,1)
 
     # take the biggest drive as the storage drive
     _storageDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
