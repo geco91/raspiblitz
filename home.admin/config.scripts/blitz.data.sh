@@ -80,6 +80,7 @@ if [ "$1" = "layout" ]; then
     # scenario could be: unknown, recover, fresh
     scenario="unknown"
     storageBlockchainGB=0
+    dataInspectDone=0
 
     # initial values for drives & state to determine
     storageDevice=""
@@ -129,7 +130,7 @@ if [ "$1" = "layout" ]; then
                 needsUnmount=1
             fi
             
-            runDataInspect=0
+            dataInspectPartition=0
             deviceName=$(echo "${name}" | sed -E 's/p?[0-9]+$//')
             echo "# Checking partition ${name} (${size}GB) on ${deviceName} mounted at ${mountPath}"
 
@@ -148,7 +149,7 @@ if [ "$1" = "layout" ]; then
                 # check if its a combined data & storage partition
                 if [ -d "${mountPath}/app-data" ]; then
                     combinedDataStorage=1
-                    runDataInspect=1
+                    dataInspectPartition=1
                 else
                     combinedDataStorage=0
                 fi
@@ -176,7 +177,7 @@ if [ "$1" = "layout" ]; then
 
                 # set data
                 echo "# L> DATA partition"
-                runDataInspect=1
+                dataInspectPartition=1
                 dataDevice="${deviceName}"
                 dataSizeGB="${size}"
                 dataPartition="${name}"
@@ -207,17 +208,16 @@ if [ "$1" = "layout" ]; then
             fi
 
             # Datainspect: copy setup relevant data from partition to temp location
-            if [ "$runDataInspect" = "1" ]; then
-
-                echo "# L> run data inspect - RAMDISK: /var/cache/raspiblitz/hdd-inspect"
-
-                # check that /var/cache/raspiblitz exists
+            if [ "$dataInspectPartition" = "1" ]; then
                 if [ "$userWantsInspect" = "0" ]; then
                     echo "# L> skipping data inspect - use '-inspect' to copy data to RAMDISK for inspection"
                 elif [ ! -d "/var/cache/raspiblitz" ]; then
                     echo "# L> skipping data inspect - RAMDISK not found"
                 else
+
+                    echo "# L> run data inspect - RAMDISK: /var/cache/raspiblitz/hdd-inspect"
                     mkdir /var/cache/raspiblitz/hdd-inspect 2>/dev/null
+                    dataInspectDone=1
 
                     # make copy of raspiblitz.conf to RAMDISK (try old and new path)
                     cp -a ${mountPath}/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
@@ -340,6 +340,7 @@ if [ "$1" = "layout" ]; then
     echo "dataSizeGB='${dataSizeGB}'"
     echo "dataPartition='${dataPartition}'"
     echo "dataMountedPath='${dataMountedPath}'"
+    echo "dataInspectDone='${dataInspectDone}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
