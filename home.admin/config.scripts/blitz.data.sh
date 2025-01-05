@@ -72,7 +72,7 @@ if [ "$1" = "layout" ]; then
 
     # initial values for drives to determine
     storageDevice=""
-    systemDevice=""
+    systemDevice="sda"
     dataDevice=""
 
     # get a list of all connected drives >63GB ordered by size (biggest first)
