@@ -199,23 +199,23 @@ if [ "$1" = "layout" ]; then
                 fi
 
                 # set data - just so that same device is used again to overwrite on fresh install
-                echo "# L> SYSTEM partition"
+                echo "#  - SYSTEM partition"
                 systemDevice="${deviceName}"
                 systemSizeGB="${size}"
                 systemPartition="${name}"
             else
-                echo "# L> no data found on partition or too small"
+                echo "#  - no data found on partition or too small"
             fi
 
             # Datainspect: copy setup relevant data from partition to temp location
             if [ "$dataInspectPartition" = "1" ]; then
                 if [ "$userWantsInspect" = "0" ]; then
-                    echo "# L> skipping data inspect - use '-inspect' to copy data to RAMDISK for inspection"
+                    echo "#  - skipping data inspect - use '-inspect' to copy data to RAMDISK for inspection"
                 elif [ ! -d "/var/cache/raspiblitz" ]; then
                     echo "# L> skipping data inspect - RAMDISK not found"
                 else
 
-                    echo "# L> run data inspect - RAMDISK: /var/cache/raspiblitz/hdd-inspect"
+                    echo "#  - run data inspect - RAMDISK: /var/cache/raspiblitz/hdd-inspect"
                     mkdir /var/cache/raspiblitz/hdd-inspect 2>/dev/null
                     dataInspectDone=1
 
@@ -223,20 +223,20 @@ if [ "$1" = "layout" ]; then
                     cp -a ${mountPath}/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     cp -a ${mountPath}/app-data/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" ]; then
-                        echo "# L> raspiblitz.conf copied to RAMDISK"
+                        echo "#  - raspiblitz.conf copied to RAMDISK"
                     fi
 
                     # make copy of WIFI config to RAMDISK (if available)
                     cp -a ${mountPath}/app-data/wifi /var/cache/raspiblitz/hdd-inspect/ 2>/dev/null
                     if [ -d "/var/cache/raspiblitz/hdd-inspect/wifi" ]; then
-                        echo "# L> WIFI config copied to RAMDISK"
+                        echo "#  - WIFI config copied to RAMDISK"
                     fi
 
                     # make copy of SSH keys to RAMDISK (if available)
                     cp -a ${mountPath}/app-data/sshd /var/cache/raspiblitz/hdd-inspect 2>/dev/null
                     cp -a ${mountPath}/app-data/ssh-root /var/cache/raspiblitz/hdd-inspect 2>/dev/null
                     if [ -d "/var/cache/raspiblitz/hdd-inspect/sshd" ] || [ -d "/var/cache/raspiblitz/hdd-inspect/ssh-root" ]; then
-                        echo "# L> SSH keys copied to RAMDISK"
+                        echo "#  - SSH keys copied to RAMDISK"
                     fi
                 fi
             fi
