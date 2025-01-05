@@ -138,7 +138,7 @@ if [ "$1" = "layout" ]; then
             if [ -d "${mountPath}/app-storage" ]; then
 
                 # set data
-                echo "# L> STORAGE partition"
+                echo "#  - STORAGE partition"
                 storageDevice="${deviceName}"
                 storageSizeGB="${size}"
                 storagePartition="${name}"
@@ -176,7 +176,7 @@ if [ "$1" = "layout" ]; then
                 fi
 
                 # set data
-                echo "# L> DATA partition"
+                echo "#  - DATA partition"
                 dataInspectPartition=1
                 dataDevice="${deviceName}"
                 dataSizeGB="${size}"
@@ -212,7 +212,7 @@ if [ "$1" = "layout" ]; then
                 if [ "$userWantsInspect" = "0" ]; then
                     echo "#  - skipping data inspect - use '-inspect' to copy data to RAMDISK for inspection"
                 elif [ ! -d "/var/cache/raspiblitz" ]; then
-                    echo "# L> skipping data inspect - RAMDISK not found"
+                    echo "#  - skipping data inspect - RAMDISK not found"
                 else
 
                     echo "#  - run data inspect - RAMDISK: /var/cache/raspiblitz/hdd-inspect"
