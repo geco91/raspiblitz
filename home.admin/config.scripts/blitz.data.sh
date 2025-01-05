@@ -123,9 +123,8 @@ if [ "$1" = "layout" ]; then
                 needsUnmount=1
             fi
             
-            label=$(lsblk -no LABEL "/dev/${name}" 2>/dev/null)
             deviceName=$(echo "${name}" | sed -E 's/p?[0-9]+$//')
-            echo "# Checking partition ${name} (${size}GB) on ${deviceName} mounted at ${mountPath} with label ${label}"
+            echo "# Checking partition ${name} (${size}GB) on ${deviceName} mounted at ${mountPath}"
 
             # Check STORAGE DRIVE
             if [ -d "${mountPath}/app-storage" ]; then
