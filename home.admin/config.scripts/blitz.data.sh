@@ -1,8 +1,8 @@
 #!/bin/bash
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  >&2 echo "# managing the data drive(s) with new bootable setups for RaspberryPi, VMs and Laptops"
- >&2 echo "# blitz.data.sh status   # check if system is setup and what drives are used"
- >&2 echo "# blitz.data.sh layout   # auto detect the old/best drives to use for storage, system and data"
+ >&2 echo "# blitz.data.sh status             # check if system is setup and what drives are used"
+ >&2 echo "# blitz.data.sh layout [-inspect]  # auto detect the old/best drives to use for storage, system and data"
  >&2 echo "# blitz.data.sh setup"
  echo "error='missing parameters'"
  exit 1
@@ -72,6 +72,11 @@ if [ "$1" = "layout" ]; then
 
     echo "# blitz.data.sh layout"
 
+    userWantsInspect=0
+    if [ "$2" = "-inspect" ]; then
+        userWantsInspect=1
+    fi
+
     # scenario could be: unknown, recover, fresh
     scenario="unknown"
     storageBlockchainGB=0
@@ -124,6 +129,7 @@ if [ "$1" = "layout" ]; then
                 needsUnmount=1
             fi
             
+            runDataInspect=0
             deviceName=$(echo "${name}" | sed -E 's/p?[0-9]+$//')
             echo "# Checking partition ${name} (${size}GB) on ${deviceName} mounted at ${mountPath}"
 
@@ -142,6 +148,7 @@ if [ "$1" = "layout" ]; then
                 # check if its a combined data & storage partition
                 if [ -d "${mountPath}/app-data" ]; then
                     combinedDataStorage=1
+                    runDataInspect=1
                 else
                     combinedDataStorage=0
                 fi
@@ -169,6 +176,7 @@ if [ "$1" = "layout" ]; then
 
                 # set data
                 echo "# L> DATA partition"
+                runDataInspect=1
                 dataDevice="${deviceName}"
                 dataSizeGB="${size}"
                 dataPartition="${name}"
@@ -196,6 +204,41 @@ if [ "$1" = "layout" ]; then
                 systemPartition="${name}"
             else
                 echo "# L> no data found on partition or too small"
+            fi
+
+            # Datainspect: copy setup relevant data from partition to temp location
+            if [ "$runDataInspect" = "1" ]; then
+
+                echo "# L> run data inspect - RAMDISK: /var/cache/raspiblitz/hdd-inspect"
+
+                # check that /var/cache/raspiblitz exists
+                if [ "$userWantsInspect" = "1" ]; then
+                    echo "# L> skipping data inspect - use '-inspect' to copy data to RAMDISK for inspection"
+                elif [ ! -d "/var/cache/raspiblitz" ]; then
+                    echo "# L> skipping data inspect - RAMDISK not found"
+                else
+                    mkdir /var/cache/raspiblitz/hdd-inspect 2>/dev/null
+
+                    # make copy of raspiblitz.conf to RAMDISK (try old and new path)
+                    cp -a ${mountPath}/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
+                    cp -a ${mountPath}/app-data/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
+                    if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" ]; then
+                        echo "# L> raspiblitz.conf copied to RAMDISK"
+                    fi
+
+                    # make copy of WIFI config to RAMDISK (if available)
+                    cp -a ${mountPath}/app-data/wifi /var/cache/raspiblitz/hdd-inspect/ 2>/dev/null
+                    if [ -d "/var/cache/raspiblitz/hdd-inspect/wifi" ]; then
+                        echo "# L> WIFI config copied to RAMDISK"
+                    fi
+
+                    # make copy of SSH keys to RAMDISK (if available)
+                    cp -a ${mountPath}/app-data/sshd /var/cache/raspiblitz/hdd-inspect 2>/dev/null
+                    cp -a ${mountPath}/app-data/ssh-root /var/cache/raspiblitz/hdd-inspect 2>/dev/null
+                    if [ -d "/var/cache/raspiblitz/hdd-inspect/sshd" ] || [ -d "/var/cache/raspiblitz/hdd-inspect/ssh-root" ]; then
+                        echo "# L> SSH keys copied to RAMDISK"
+                    fi
+                fi
             fi
 
             # cleanup if we mounted
