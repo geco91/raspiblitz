@@ -72,8 +72,32 @@ if [ "$1" = "layout" ]; then
 
     # initial values for drives to determine
     storageDevice=""
-    systemDevice="sda"
+    systemDevice=""
     dataDevice=""
+
+    # get a list of all existing ext4 partitions of connected storage drives
+    ext4Partitions=$(lsblk -no NAME,SIZE,FSTYPE | sed 's/[└├]─//g' | grep -E "^(sd|nvme)" | grep "ext4" | \
+    awk '{ 
+        size=$2
+        if(size ~ /T/) { 
+          sub("T","",size); size=size*1024 
+        } else if(size ~ /G/) { 
+          sub("G","",size); size=size*1 
+        } else if(size ~ /M/) { 
+          sub("M","",size); size=size/1024 
+        }
+        printf "%s %.0f\n", $1, size
+    }' | sort -k2,2n -k1,1)
+    echo "ext4Partitions='${ext4Partitions}'"
+
+    # check every partition if it has data to recover
+    while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            name=$(echo "$line" | awk '{print $1}')
+            size=$(echo "$line" | awk '{print $2}')
+            echo "# TODO Checking partition ${name} with size ${size}GB"
+        fi
+    done <<< "${ext4Partitions}"
 
     # get a list of all connected drives >63GB ordered by size (biggest first)
     listOfDevices=$(lsblk -dno NAME,SIZE | grep -E "^(sd|nvme)" | \
@@ -88,7 +112,7 @@ if [ "$1" = "layout" ]; then
     }
     if (size >= 63) printf "%s %.0f\n", $1, size
     }' | sort -k2,2nr -k1,1 )
-    echo "listOfDevices='${listOfDevices}'"
+    #echo "listOfDevices='${listOfDevices}'"
 
     # remove lines with already used drives
     if [ -n "${storageDevice}" ]; then
@@ -100,7 +124,7 @@ if [ "$1" = "layout" ]; then
     if [ -n "${dataDevice}" ]; then
         listOfDevices=$(echo "${listOfDevices}" | grep -v "${dataDevice}")
     fi
-    echo "listOfDevices='${listOfDevices}'"
+    #echo "listOfDevices='${listOfDevices}'"
 
     # Set STORAGE
     if [ ${#storageDevice} -eq 0 ]; then
