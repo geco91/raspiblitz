@@ -70,6 +70,8 @@ fi
 
 if [ "$1" = "layout" ]; then
 
+    echo "# blitz.data.sh layout"
+
     # scenario could be: unknown, recover, fresh
     scenario="unknown"
     storageBlockchainGB=0
@@ -92,7 +94,7 @@ if [ "$1" = "layout" ]; then
         }
         printf "%s %.0f\n", $1, size
     }' | sort -k2,2n -k1,1)
-    echo "ext4Partitions='${ext4Partitions}'"
+    #echo "ext4Partitions='${ext4Partitions}'"
 
     # check if some drive is already mounted on /mnt/temp
     mountPath=$(findmnt -n -o TARGET "/mnt/temp" 2>/dev/null)
