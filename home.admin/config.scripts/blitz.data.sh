@@ -215,7 +215,7 @@ if [ "$1" = "layout" ]; then
                     echo "#  - skipping data inspect - RAMDISK not found"
                 else
 
-                    echo "#  - run data inspect - RAMDISK: /var/cache/raspiblitz/hdd-inspect"
+                    echo "#  - RUN INSPECT -> RAMDISK: /var/cache/raspiblitz/hdd-inspect"
                     mkdir /var/cache/raspiblitz/hdd-inspect 2>/dev/null
                     dataInspectDone=1
 
@@ -223,20 +223,20 @@ if [ "$1" = "layout" ]; then
                     cp -a ${mountPath}/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     cp -a ${mountPath}/app-data/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" ]; then
-                        echo "#  - raspiblitz.conf copied to RAMDISK"
+                        echo "#    * raspiblitz.conf copied to RAMDISK"
                     fi
 
                     # make copy of WIFI config to RAMDISK (if available)
                     cp -a ${mountPath}/app-data/wifi /var/cache/raspiblitz/hdd-inspect/ 2>/dev/null
                     if [ -d "/var/cache/raspiblitz/hdd-inspect/wifi" ]; then
-                        echo "#  - WIFI config copied to RAMDISK"
+                        echo "#    * WIFI config copied to RAMDISK"
                     fi
 
                     # make copy of SSH keys to RAMDISK (if available)
                     cp -a ${mountPath}/app-data/sshd /var/cache/raspiblitz/hdd-inspect 2>/dev/null
                     cp -a ${mountPath}/app-data/ssh-root /var/cache/raspiblitz/hdd-inspect 2>/dev/null
                     if [ -d "/var/cache/raspiblitz/hdd-inspect/sshd" ] || [ -d "/var/cache/raspiblitz/hdd-inspect/ssh-root" ]; then
-                        echo "#  - SSH keys copied to RAMDISK"
+                        echo "#    * SSH keys copied to RAMDISK"
                     fi
                 fi
             fi
