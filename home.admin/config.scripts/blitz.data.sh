@@ -129,6 +129,7 @@ if [ "$1" = "layout" ]; then
             if [ -d "${mountPath}/app-storage" ]; then
 
                 # set data
+                echo "# L> STORAGE partition"
                 storageDevice="${deviceName}"
                 storageSizeGB="${size}"
                 storagePartition="${name}"
@@ -167,6 +168,7 @@ if [ "$1" = "layout" ]; then
                 fi
 
                 # set data
+                echo "# L> DATA partition"
                 dataDevice="${deviceName}"
                 dataSizeGB="${size}"
                 dataPartition="${name}"
@@ -188,9 +190,12 @@ if [ "$1" = "layout" ]; then
                 fi
 
                 # set data - just so that same device is used again to overwrite on fresh install
+                echo "# L> SYSTEM partition"
                 systemDevice="${deviceName}"
                 systemSizeGB="${size}"
                 systemPartition="${name}"
+            else
+                echo "# L> no data found on partition"
             fi
 
             # cleanup if we mounted
