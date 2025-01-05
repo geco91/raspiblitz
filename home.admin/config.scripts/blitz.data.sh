@@ -212,7 +212,7 @@ if [ "$1" = "layout" ]; then
                 echo "# L> run data inspect - RAMDISK: /var/cache/raspiblitz/hdd-inspect"
 
                 # check that /var/cache/raspiblitz exists
-                if [ "$userWantsInspect" = "1" ]; then
+                if [ "$userWantsInspect" = "0" ]; then
                     echo "# L> skipping data inspect - use '-inspect' to copy data to RAMDISK for inspection"
                 elif [ ! -d "/var/cache/raspiblitz" ]; then
                     echo "# L> skipping data inspect - RAMDISK not found"
