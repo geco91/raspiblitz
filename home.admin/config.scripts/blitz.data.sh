@@ -70,11 +70,15 @@ fi
 
 if [ "$1" = "layout" ]; then
 
-    # initial values for drives to determine
+    # scenario could be: unknown, recover, fresh
+    scenario="unknown"
+    storageBlockchainGB=0
+
+    # initial values for drives & state to determine
     storageDevice=""
     systemDevice=""
     dataDevice=""
-
+    
     # get a list of all existing ext4 partitions of connected storage drives
     ext4Partitions=$(lsblk -no NAME,SIZE,FSTYPE | sed 's/[└├]─//g' | grep -E "^(sd|nvme)" | grep "ext4" | \
     awk '{ 
@@ -103,13 +107,11 @@ if [ "$1" = "layout" ]; then
             name=$(echo "$line" | awk '{print $1}')
             size=$(echo "$line" | awk '{print $2}')
             
-            # check if partition is mounted
-            mountPath=$(findmnt -n -o TARGET "/dev/${name}" 2>/dev/null)
-            
+            # mount partition if not already mounted
+            mountPath=$(findmnt -n -o TARGET "/dev/${name}" 2>/dev/null)   
             if [ -z "${mountPath}" ]; then
                 # create temp mount point if not exists
                 mkdir -p /mnt/temp 2>/dev/null
-                
                 # try to mount
                 if ! mount "/dev/${name}" /mnt/temp; then
                     echo "error='cannot mount /dev/${name}'"
@@ -120,12 +122,77 @@ if [ "$1" = "layout" ]; then
             fi
             
             label=$(lsblk -no LABEL "/dev/${name}" 2>/dev/null)
-            echo "# Checking partition ${name} (${size}GB) mounted at ${mountPath} with label ${label}"
+            deviceName=$(echo "${name}" | sed -E 's/p?[0-9]+$//')
+            echo "# Checking partition ${name} (${size}GB) on ${deviceName} mounted at ${mountPath} with label ${label}"
 
             # Check STORAGE DRIVE
-            
+            if [ -d "${mountPath}/app-storage" ]; then
 
-            
+                # set data
+                storageDevice="${deviceName}"
+                storageSizeGB="${size}"
+                storagePartition="${name}"
+                if [ "${needsUnmount}" = "0" ]; then
+                    storageMountedPath="${mountPath}"
+                fi
+                
+                # check if its a combined data & storage partition
+                if [ -d "${mountPath}/app-data" ]; then
+                    combinedDataStorage=1
+                else
+                    combinedDataStorage=0
+                fi
+
+                # check blochain data
+                if [ -d "${mountPath}/blocks" ]; then
+                    storageBlockchainGB=$(du -s ${mountPath}/app-storage/bitcoin/blocks 2>/dev/null| awk '{printf "%.0f", $1/(1024*1024)}')
+                    if [ "${storageBlockchainGB}" = "" ]; then
+                        # check old location
+                        storageBlockchainGB=$(du -s ${mountPath}/bitcoin/blocks 2>/dev/null| awk '{printf "%.0f", $1/(1024*1024)}')
+                    fi
+                    if [ "${storageBlockchainGB}" = "" ]; then
+                        # if nothing found - set to numeric 0
+                        storageBlockchainGB=0
+                    fi
+                fi
+
+            # Check DATA DRIVE
+            elif [ -d "${mountPath}/app-data" ]; then
+
+                # check for unclean setups
+                if [ -d "${mountPath}/app-storage" ]; then
+                    echo "# there might be two old storage drives connected"
+                    echo "error='app-storage found on app-data partition'"
+                    exit 1
+                fi
+
+                # set data
+                dataDevice="${deviceName}"
+                dataSizeGB="${size}"
+                dataPartition="${name}"
+                if [ "${needsUnmount}" = "0" ]; then
+                    dataMountedPath="${mountPath}"
+                fi
+
+            # Check SYSTEM DRIVE
+            elif [ -d "${mountPath}/boot" ] && [ -d "${mountPath}/sys" ]; then
+
+                # check for unclean setups
+                if [ -d "${mountPath}/app-storage" ]; then
+                    echo "error='system partition mixed with storage'"
+                    exit 1
+                fi
+                if [ -d "${mountPath}/app-data" ]; then
+                    echo "error='system partition mixed with data'"
+                    exit 1
+                fi
+
+                # set data - just so that same device is used again to overwrite on fresh install
+                systemDevice="${deviceName}"
+                systemSizeGB="${size}"
+                systemPartition="${name}"
+            fi
+
             # cleanup if we mounted
             if [ "${needsUnmount}" = "1" ]; then
                 umount /mnt/temp
@@ -193,29 +260,35 @@ if [ "$1" = "layout" ]; then
 
     # Set DATA
     if [ ${#dataDevice} -eq 0 ]; then
+
         # when no data device yet: take the second biggest drive as the data drive
         dataDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
         dataSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
         # remove the data device from the list
         listOfDevices=$(echo "${listOfDevices}" | grep -v "${dataDevice}")
+
+        # if there is was no spereated data drive - run combine data & storage partiton
+        if [ ${#dataDevice} -eq 0 ]; then
+            combinedDataStorage=1
+        fi
     fi
 
     # count remaining devices
     remainingDevices=$(echo "${listOfDevices}" | wc -l)
 
-    # if there is no spereated data drive - run combine data & storage partiton
-    if [ ${#dataDevice} -eq 0 ]; then
-        combinedDataStorage=1
-    fi
-
     # output the result
     echo "storageDevice='${storageDevice}'"
     echo "storageSizeGB='${storageSizeGB}'"
-    echo "storageRecoverPartition='${storageRecoverPartition}'"
+    echo "storagePartition='${storageRecoverPartition}'"
+    echo "storageMountedPath='${storageMountedPath}'"
+    echo "storageBlockchainGB='${storageBlockchainGB}'"
     echo "systemDevice='${systemDevice}'"
     echo "systemSizeGB='${systemSizeGB}'"
+    echo "systemPartition='${systemOldPartition}'"
     echo "dataDevice='${dataDevice}'"
     echo "dataSizeGB='${dataSizeGB}'"
+    echo "dataPartition='${dataRecoverPartition}'"
+    echo "dataMountedPath='${dataMountedPath}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
