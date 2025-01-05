@@ -197,7 +197,7 @@ if [ "$1" = "layout" ]; then
                 systemSizeGB="${size}"
                 systemPartition="${name}"
             else
-                echo "# L> no data found on partition"
+                echo "# L> no data found on partition or too small"
             fi
 
             # cleanup if we mounted
