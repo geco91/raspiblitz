@@ -512,7 +512,7 @@ if [ "$1" = "uasp-fix" ]; then
         echo "# Skipping UASP deactivation - no USB HDD Adapter found"
         echo "neededReboot=0"
     elif [ ${hddAdapterUASP} -eq 1 ]; then
-        echo "# Skipping UASP deactivation - no USB HDD Adapter is on UASP WHITELIST"
+        echo "# Skipping UASP deactivation - USB HDD Adapter is on UASP WHITELIST"
         echo "neededReboot=0"
     else
         echo "# UASP deactivation - because USB HDD Adapter is not on UASP WHITELIST ..."
