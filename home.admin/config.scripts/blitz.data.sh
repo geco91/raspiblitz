@@ -292,11 +292,15 @@ if [ "$1" = "status" ]; then
     fi
     # if there is was no spereated system drive left
     if [ ${#systemDevice} -eq 0 ]; then
-        if [ "${computerType}" = "raspberrypi" ] && [ ${gotNVMe} = "0" ]; then
-            # if its a RaspberryPi with a USB drive - keep system drive empty and keep booting from SD
+        sdboot=$(lsblk | grep mmcblk | grep -c /boot) 
+        if [ "${#dataMountedPath}" -gt 0 ] && [ "${sdboot}" -eq 1 ]; then
+            # if its setup RaspberryPi and actually booting from SD card
             bootFromSD=1
-        else
-            # all other like VM, RaspberryPi with a NVMe or a laptop - use the storage drive as system drive
+        elif [ "${#dataMountedPath}" -eq 0 ] && [ "${computerType}" = "raspberrypi" ] && [ ${gotNVMe} = "0" ]; then
+            # if its not setup RaspberryPi with a USB ssd - recommend to further boot from SD card
+            bootFromSD=1
+        elif [ "${#dataMountedPath}" -eq 0 ]; then
+            # all other not setuped systems like VM, RaspberryPi with a NVMe or a laptop - use the storage drive as system boot drive
             bootFromStorage=1
         fi
     fi
@@ -339,7 +343,7 @@ if [ "$1" = "status" ]; then
         scenario="ready"
 
     # ready: RaspberryPi+BootNVMe, Laptop or VM with patched thru USB drive
-    elif [ ${#storageMountedPath} -gt 0 ] && [ ${combinedDataStorage} -eq 1 ] && [ ${#systemMountedPath} -gt 0 ]; then
+    elif [ ${#storageMountedPath} -gt 0 ] && [ ${combinedDataStorage} -eq 1 ]; then
         scenario="ready"
 
     # ready: Old RaspberryPi 
