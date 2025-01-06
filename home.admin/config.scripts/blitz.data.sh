@@ -3,8 +3,11 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
     >&2 echo "# managing the data drive(s) with new bootable setups for RaspberryPi, VMs and Laptops"
     >&2 echo "# blitz.data.sh status [-inspect] # auto detect the old/best drives to use for storage, system and data"
     >&2 echo "# blitz.data.sh setup STOARGE [device] combinedData=[0|1] bootFromStorage=[0|1]"
-    >&2 echo "# blitz.data.sh setup SINGLE-DATA"
-    >&2 echo "# blitz.data.sh setup SINGLE-SYSTEM"
+    >&2 echo "# blitz.data.sh setup SEPERATE-DATA [device]"
+    >&2 echo "# blitz.data.sh setup SEPERATE-SYSTEM [device]"
+    >&2 echo "# blitz.data.sh recover STOARGE [device] combinedData=[0|1] bootFromStorage=[0|1]"
+    >&2 echo "# blitz.data.sh recover SEPERATE-DATA [device]"
+    >&2 echo "# blitz.data.sh recover SEPERATE-SYSTEM [device]"
     >&2 echo "# blitz.data.sh migration [umbrel|citadel|mynode] [partition] [-test] # will migrate partition to raspiblitz"
     >&2 echo "# blitz.data.sh uasp-fix [-info] # deactivates UASP for non supported USB HDD Adapters"
     echo "error='missing parameters'"
@@ -54,15 +57,13 @@ if [ "$1" = "status" ]; then
         userWantsInspect=1
     fi
 
-    # scenario could be: unknown, migration, recover, setup, ready
-    scenario="unknown"
-    storageBlockchainGB=0
-    dataInspectDone=0
-
     # initial values for drives & state to determine
     storageDevice=""
     systemDevice=""
     dataDevice=""
+    storageBlockchainGB=0
+    dataInspectDone=0
+    dataBlitzConfigExists=0
     
     # get a list of all existing ext4 partitions of connected storage drives
     ext4Partitions=$(lsblk -no NAME,SIZE,FSTYPE | sed 's/[└├]─//g' | grep -E "^(sd|nvme)" | grep "ext4" | \
@@ -216,6 +217,7 @@ if [ "$1" = "status" ]; then
                     cp -a ${mountPath}/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     cp -a ${mountPath}/app-data/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" ]; then
+                        dataBlitzConfigExists=1
                         echo "#    * raspiblitz.conf copied to RAMDISK"
                     fi
 
@@ -320,7 +322,45 @@ if [ "$1" = "status" ]; then
         remainingDevices=$(echo "${listOfDevices}" | wc -l)
     fi
 
+    #################
+    # Define Scenario
+    scenario="unknown"
+
+    # migration: detected data from another node implementation
+    if [ ${#storageMigration} -gt 0 ]; then
+        scenario="migration"
+
+    # nodata: no drives >64GB connected
+    elif [ ${#storageMountedPath} -eq 0 ]  && [ ${#dataMountedPath} -eq 0 ] && [ ${#systemMountedPath} -eq 0 ]; then
+        scenario="nodata"
+
+    # ready: Proxmox VM with all seperated drives mounted
+    elif [ ${#storageMountedPath} -gt 0 ]  && [ ${#dataMountedPath} -gt 0 ] && [ ${#systemMountedPath} -gt 0 ]; then
+        scenario="ready"
+
+    # ready: RaspberryPi+BootNVMe, Laptop or VM with patched thru USB drive
+    elif [ ${#storageMountedPath} -gt 0 ] && [ ${combinedDataStorage} -eq 1 ] && [ ${#systemMountedPath} -gt 0 ]; then
+        scenario="ready"
+
+    # ready: Old RaspberryPi 
+    elif [ ${#storageMountedPath} -gt 0 ] && [ ${combinedDataStorage} -eq 1 ] && [ ${bootFromSD} -eq 1 ]; then
+        scenario="ready"
+
+    # recover: drives there but unmounted & blitz config exists (check raspiblitz.conf with -inspect if its update)
+    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataBlitzConfigExists} -eq 1 ]; then
+        scenario="recover"
+
+    # setup: drives there but unmounted & no blitz config exists 
+    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataBlitzConfigExists} -eq 0 ]; then
+        scenario="setup"
+
+    # UNKNOWN SCENARIO
+    else
+        scenario="unknown"
+    fi
+
     # output the result
+    echo "scenario='${scenario}'"
     echo "storageDevice='${storageDevice}'"
     echo "storageSizeGB='${storageSizeGB}'"
     echo "storagePartition='${storagePartition}'"
@@ -330,16 +370,46 @@ if [ "$1" = "status" ]; then
     echo "systemDevice='${systemDevice}'"
     echo "systemSizeGB='${systemSizeGB}'"
     echo "systemPartition='${systemPartition}'"
+    echo "systemMountedPath='${systemMountedPath}'"
     echo "dataDevice='${dataDevice}'"
     echo "dataSizeGB='${dataSizeGB}'"
     echo "dataPartition='${dataPartition}'"
     echo "dataMountedPath='${dataMountedPath}'"
     echo "dataInspectDone='${dataInspectDone}'"
+    echo "dataBlitzConfigExists='${dataBlitzConfigExists}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
     echo "remainingDevices='${remainingDevices}'"
 
+    exit 0
+fi
+
+###################
+# SETUP
+# format, partition and setup drives
+###################
+
+if [ "$1" = "setup" ]; then
+    echo "# blitz.data.sh setup"
+
+    # replace format, fstab & link (maybe there is some same linking as in recover)
+
+    echo "error='TODO'"
+    exit 0
+fi
+
+###################
+# RECOVER
+# re-integrate drives into the system
+###################
+
+if [ "$1" = "recover" ]; then
+    echo "# blitz.data.sh recover"
+
+    # replace fstab & link (maybe there is some same linking as in setup)
+
+    echo "error='TODO'"
     exit 0
 fi
 
