@@ -63,7 +63,7 @@ if [ "$1" = "status" ]; then
     dataDevice=""
     storageBlockchainGB=0
     dataInspectDone=0
-    dataBlitzConfigExists=0
+    dataInspectConfigFound=0
     
     # get a list of all existing ext4 partitions of connected storage drives
     ext4Partitions=$(lsblk -no NAME,SIZE,FSTYPE | sed 's/[└├]─//g' | grep -E "^(sd|nvme)" | grep "ext4" | \
@@ -217,7 +217,7 @@ if [ "$1" = "status" ]; then
                     cp -a ${mountPath}/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     cp -a ${mountPath}/app-data/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" ]; then
-                        dataBlitzConfigExists=1
+                        dataInspectConfigFound=1
                         echo "#    * raspiblitz.conf copied to RAMDISK"
                     fi
 
@@ -351,11 +351,11 @@ if [ "$1" = "status" ]; then
         scenario="ready"
 
     # recover: drives there but unmounted & blitz config exists (check raspiblitz.conf with -inspect if its update)
-    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataBlitzConfigExists} -eq 1 ]; then
+    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataInspectConfigFound} -eq 1 ]; then
         scenario="recover"
 
     # setup: drives there but unmounted & no blitz config exists 
-    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataBlitzConfigExists} -eq 0 ]; then
+    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataInspectConfigFound} -eq 0 ]; then
         scenario="setup"
 
     # UNKNOWN SCENARIO
@@ -380,7 +380,7 @@ if [ "$1" = "status" ]; then
     echo "dataPartition='${dataPartition}'"
     echo "dataMountedPath='${dataMountedPath}'"
     echo "dataInspectDone='${dataInspectDone}'"
-    echo "dataBlitzConfigExists='${dataBlitzConfigExists}'"
+    echo "dataInspectConfigFound='${dataInspectConfigFound}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
