@@ -293,13 +293,13 @@ if [ "$1" = "status" ]; then
     # if there is was no spereated system drive left
     if [ ${#systemDevice} -eq 0 ]; then
         sdboot=$(lsblk | grep mmcblk | grep -c /boot) 
-        if [ "${#dataMountedPath}" -gt 0 ] && [ "${sdboot}" -eq 1 ]; then
+        if [ "${#storageMountedPath}" -gt 0 ] && [ "${sdboot}" -eq 1 ]; then
             # if its setup RaspberryPi and actually booting from SD card
             bootFromSD=1
-        elif [ "${#dataMountedPath}" -eq 0 ] && [ "${computerType}" = "raspberrypi" ] && [ ${gotNVMe} = "0" ]; then
+        elif [ "${#storageMountedPath}" -eq 0 ] && [ "${computerType}" = "raspberrypi" ] && [ ${gotNVMe} = "0" ]; then
             # if its not setup RaspberryPi with a USB ssd - recommend to further boot from SD card
             bootFromSD=1
-        elif [ "${#dataMountedPath}" -eq 0 ]; then
+        elif [ "${#storageMountedPath}" -eq 0 ]; then
             # all other not setuped systems like VM, RaspberryPi with a NVMe or a laptop - use the storage drive as system boot drive
             bootFromStorage=1
         fi
