@@ -64,6 +64,7 @@ if [ "$1" = "status" ]; then
     storageBlockchainGB=0
     dataInspectDone=0
     dataInspectConfigFound=0
+    combinedDataStorage=0
     
     # get a list of all existing ext4 partitions of connected storage drives
     ext4Partitions=$(lsblk -no NAME,SIZE,FSTYPE | sed 's/[└├]─//g' | grep -E "^(sd|nvme)" | grep "ext4" | \
