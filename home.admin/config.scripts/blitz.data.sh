@@ -385,24 +385,24 @@ if [ "$1" = "status" ]; then
     # STORAGE
     if [ ${#storageDevice} -gt 0 ]; then
         if [ ${storageSizeGB} -lt $((storageFullMinGB - 1)) ]; then
-            echo "storageWarning='only-pruned'"
+            storageWarning='only-pruned'
         fi
         if [ ${storageSizeGB} -lt $((storagePrunedMinGB - 1)) ]; then
-            echo "storageWarning='too-small'"
+            storageWarning='too-small'
         fi
     fi
 
     # SYSTEM
     if [ ${#systemDevice} -gt 0 ]; then
         if [ ${systemSizeGB} -lt $((systemMinGB - 1)) ]; then
-            echo "systemWarning='too-small'"
+            systemWarning='too-small'
         fi
     fi
 
     # DATA
     if [ ${#dataDevice} -gt 0 ]; then
         if [ ${dataSizeGB} -lt $((dataMinGB - 1)) ]; then
-            echo "dataWarning='too-small'"
+            dataWarning='too-small'
         fi
     fi
 
