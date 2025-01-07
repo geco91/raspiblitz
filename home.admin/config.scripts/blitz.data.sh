@@ -154,7 +154,7 @@ if [ "$1" = "status" ]; then
                 fi
 
             # Check DATA DRIVE
-            elif [ -d "${mountPath}/app-data" ] && [ ${size} -gt 63 ]; then
+            elif [ -d "${mountPath}/app-data" ] && [ ${size} -gt 7 ]; then
 
                 # check for unclean setups
                 if [ -d "${mountPath}/app-storage" ]; then
@@ -175,7 +175,7 @@ if [ "$1" = "status" ]; then
                 fi
 
             # Check SYSTEM DRIVE
-            elif [ -d "${mountPath}/boot" ] && [ -d "${mountPath}/sys" ] && [ ${size} -gt 63 ]; then
+            elif [ -d "${mountPath}/boot" ] && [ -d "${mountPath}/sys" ] && [ ${size} -gt 7 ]; then
 
                 # check for unclean setups
                 if [ -d "${mountPath}/app-storage" ]; then
@@ -209,7 +209,7 @@ if [ "$1" = "status" ]; then
                 storageMigration="mynode"
 
             else
-                echo "#  - no data found on partition or too small"
+                echo "#  - no data found on partition"
             fi
 
             # Datainspect: copy setup relevant data from partition to temp location
