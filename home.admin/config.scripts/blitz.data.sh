@@ -135,7 +135,6 @@ if [ "$1" = "status" ]; then
                 # check if its a combined data & storage partition
                 if [ -d "${mountPath}/app-data" ]; then
                     if [ ${#dataDevice} -eq 0 ]; then
-                        dataDevice="${deviceName}"
                         combinedDataStorage=1
                     fi
                     dataInspectPartition=1
