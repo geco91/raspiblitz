@@ -264,7 +264,7 @@ if [ "$1" = "status" ]; then
         # system might run from SD card
         bootFromStorage=0
         # check if boot partition is on SD card (mmcblk)
-        bootFromSD=$(findmnt -n /boot | grep -c "^/dev/mmcblk")
+        bootFromSD=$(lsblk | grep mmcblk | grep -c /boot)
     fi
     
     ########################
