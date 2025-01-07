@@ -335,7 +335,7 @@ if [ "$1" = "status" ]; then
         scenario="migration"
 
     # nodata: no drives >64GB connected
-    elif [ ${#storageDevice} -eq 0 ]  && [ ${#storageDevice} -eq 0 ] && [ ${#storageDevice} -eq 0 ]; then
+    elif [ ${#storageDevice} -eq 0 ]; then
         scenario="nodata"
 
     # ready: Proxmox VM with all seperated drives mounted
