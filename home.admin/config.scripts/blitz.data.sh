@@ -192,6 +192,7 @@ if [ "$1" = "status" ]; then
                 systemDevice="${deviceName}"
                 systemSizeGB="${size}"
                 systemPartition="${name}"
+                systemMountedPath="${mountPath}"
 
             # Check MIGRATION: UMBREL
             elif [ -f "${mountPath}/umbrel/info.json" ]; then
