@@ -320,6 +320,7 @@ if [ "$1" = "status" ]; then
 
             # all other systems boot from storage
             else
+                echo "# all other systems boot from storage"
                 bootFromStorage=1
             fi
 
@@ -328,6 +329,7 @@ if [ "$1" = "status" ]; then
 
             # if there is a system drive but its smaller than systemMinGB - boot from storage
             if [ ${systemSizeGB} -lt ${systemMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
+                echo "# system too small - boot from storage"
                 bootFromStorage=1
 
             # otherwise remove the system device from the list
