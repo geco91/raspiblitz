@@ -32,7 +32,7 @@ fi
 
 # recommended mining minimal sizes
 storagePrunedMinGB=128
-storageFullMinGB=900
+storageFullMinGB=890
 dataMinGB=32
 systemMinGB=32
 
