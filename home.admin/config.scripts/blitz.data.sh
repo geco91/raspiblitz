@@ -258,6 +258,7 @@ if [ "$1" = "status" ]; then
     # check boot situation
     if [ -n "${storageDevice}" ] && [ "${storageDevice}" = "${systemDevice}" ]; then
         # system runs from storage device
+        echo "# system runs from storage device"
         bootFromStorage=1
         bootFromSD=0
     else
