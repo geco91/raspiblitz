@@ -30,6 +30,12 @@ fi
 
 # This script should help to setup & manage those different configurations.
 
+# recommended mining minimal sizes
+storagePrunedMinGB=128
+storageFullMinGB=900
+dataMinGB=32
+systemMinGB=32
+
 # check if started with sudo
 if [ "$EUID" -ne 0 ]; then 
   echo "error='run as root'"
@@ -127,7 +133,10 @@ if [ "$1" = "status" ]; then
                 
                 # check if its a combined data & storage partition
                 if [ -d "${mountPath}/app-data" ]; then
-                    combinedDataStorage=1
+                    if [ ${#dataDevice} -eq 0 ]; then
+                        dataDevice="${deviceName}"
+                        combinedDataStorage=1
+                    fi
                     dataInspectPartition=1
                 else
                     combinedDataStorage=0
@@ -156,6 +165,7 @@ if [ "$1" = "status" ]; then
 
                 # set data
                 echo "#  - DATA partition"
+                combinedDataStorage=0
                 dataInspectPartition=1
                 dataDevice="${deviceName}"
                 dataSizeGB="${size}"
@@ -245,7 +255,16 @@ if [ "$1" = "status" ]; then
         fi
     done <<< "${ext4Partitions}"
 
-    # get a list of all connected drives >63GB ordered by size (biggest first)
+    # check boot situation for status
+    if[ ${#storageDevice} -gt 0 ] && [  "${storageDevice}" == "${systemDevice}" ]; then
+        bootFromStorage=1
+        bootFromSD=0
+    else
+        bootFromStorage=0
+        bootFromSD=$(lsblk | grep mmcblk | grep -c /boot)
+    fi
+    
+    # get a list of all connected drives >7GB ordered by size (biggest first)
     listOfDevices=$(lsblk -dno NAME,SIZE | grep -E "^(sd|nvme)" | \
     awk '{ 
     size=$2
@@ -256,7 +275,7 @@ if [ "$1" = "status" ]; then
     } else if(size ~ /M/) { 
       sub("M","",size); size=size/1024 
     }
-    if (size >= 63) printf "%s %.0f\n", $1, size
+    if (size >= 7) printf "%s %.0f\n", $1, size
     }' | sort -k2,2nr -k1,1 )
     #echo "listOfDevices='${listOfDevices}'"
 
@@ -282,27 +301,36 @@ if [ "$1" = "status" ]; then
     fi
 
     # Set SYSTEM
-    bootFromStorage=0 # signales if there is no extra system drive add boot partition to storage drive
-    bootFromSD=0      # signales if there is no extra system drive keep booting from SD card (only RaspberryPi)
+
     if [ ${#systemDevice} -eq 0 ]; then
+
         # when no system device yet: take the next biggest drive as the system drive
         systemDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
         systemSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
-        # remove the system device from the list
-        listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
-    fi
-    # if there is was no spereated system drive left
-    if [ ${#systemDevice} -eq 0 ]; then
-        sdboot=$(lsblk | grep mmcblk | grep -c /boot) 
-        if [ "${#storageMountedPath}" -gt 0 ] && [ "${sdboot}" -eq 1 ]; then
-            # if its setup RaspberryPi and actually booting from SD card
-            bootFromSD=1
-        elif [ "${#storageMountedPath}" -eq 0 ] && [ "${computerType}" = "raspberrypi" ] && [ ${gotNVMe} = "0" ]; then
-            # if its not setup RaspberryPi with a USB ssd - recommend to further boot from SD card
-            bootFromSD=1
-        elif [ "${#storageMountedPath}" -eq 0 ]; then
-            # all other not setuped systems like VM, RaspberryPi with a NVMe or a laptop - use the storage drive as system boot drive
-            bootFromStorage=1
+
+        # if there is was no spereated system drive left
+        if [ ${#systemDevice} -eq 0 ]; then
+
+            # force RaspberryPi with no NVMe to boot from SD
+            if [ "${computerType}" == "raspberrypi" ] && [ ${gotNVMe} -lt 1 ] ; then
+                bootFromSD=1
+
+            # all other systems boot from storage
+            else
+                bootFromStorage=1
+            fi
+
+        # when seperate system drive is found - check size
+        else
+
+            # if there is a system drive but its smaller than systemMinGB - boot from storage
+            if [ ${systemSizeGB} -lt ${systemMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
+                bootFromStorage=1
+
+            # otherwise remove the system device from the list
+            else
+            listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
+
         fi
     fi
 
@@ -312,19 +340,69 @@ if [ "$1" = "status" ]; then
         # when no data device yet: take the second biggest drive as the data drive
         dataDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
         dataSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
-        # remove the data device from the list
-        listOfDevices=$(echo "${listOfDevices}" | grep -v "${dataDevice}")
 
         # if there is was no spereated data drive - run combine data & storage partiton
         if [ ${#dataDevice} -eq 0 ]; then
             combinedDataStorage=1
+
+        # if there is a data drive but its smaller than dataMinGB & storage drive is big enough - combine data & storage partiton
+        elif [ ${dataSizeGB} -lt ${dataMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
+            combinedDataStorage=1
+        
+        # remove the data device from the list
+        else
+            listOfDevices=$(echo "${listOfDevices}" | grep -v "${dataDevice}")
         fi
+
     fi
 
     # count remaining devices
     remainingDevices=0
     if [ ${#listOfDevices} -gt 0 ]; then
         remainingDevices=$(echo "${listOfDevices}" | wc -l)
+    fi
+
+    #################
+    # Check Mininimal Sizes
+
+    # in case of combined data & storage partition
+    if [ ${combinedDataStorage} -eq 1 ]; then
+        # add dataMinGB to storagePrunedMinGB
+        storagePrunedMinGB=$((${storagePrunedMinGB} + ${dataMinGB}))
+        # add dataMinGB to storageFullMinGB
+        storageFullMinGB=$((${storageFullMinGB} + ${dataMinGB}))
+    fi
+
+    # in case of booting from storage
+    if [ ${bootFromStorage} -eq 1 ]; then
+        # add systemMinGB to storagePrunedMinGB
+        storagePrunedMinGB=$((${storagePrunedMinGB} + ${systemMinGB}))
+        # add systemMinGB to storageFullMinGB
+        storageFullMinGB=$((${storageFullMinGB} + ${systemMinGB}))
+    fi
+
+    # STORAGE
+    if [ ${#storageDevice} -gt 0 ]; then
+        if [ ${storageSizeGB} -lt $((storageFullMinGB - 1)) ]; then
+            echo "storageWarning='only-pruned'"
+        fi
+        if [ ${storageSizeGB} -lt $((storagePrunedMinGB - 1)) ]; then
+            echo "storageWarning='too-small'"
+        fi
+    fi
+
+    # SYSTEM
+    if [ ${#systemDevice} -gt 0 ]; then
+        if [ ${systemSizeGB} -lt $((systemMinGB - 1)) ]; then
+            echo "systemWarning='too-small'"
+        fi
+    fi
+
+    # DATA
+    if [ ${#dataDevice} -gt 0 ]; then
+        if [ ${dataSizeGB} -lt $((dataMinGB - 1)) ]; then
+            echo "dataWarning='too-small'"
+        fi
     fi
 
     #################
@@ -368,16 +446,23 @@ if [ "$1" = "status" ]; then
     echo "scenario='${scenario}'"
     echo "storageDevice='${storageDevice}'"
     echo "storageSizeGB='${storageSizeGB}'"
+    echo "storagePrunedMinGB='${storagePrunedMinGB}'"
+    echo "storageFullMinGB='${storageFullMinGB}'"
+    echo "storageWarning='${storageWarning}'"
     echo "storagePartition='${storagePartition}'"
     echo "storageMountedPath='${storageMountedPath}'"
     echo "storageBlockchainGB='${storageBlockchainGB}'"
     echo "storageMigration='${storageMigration}'"
     echo "systemDevice='${systemDevice}'"
     echo "systemSizeGB='${systemSizeGB}'"
+    echo "systemMinGB='${systemMinGB}'"
+    echo "systemWarning='${systemWarning}'"
     echo "systemPartition='${systemPartition}'"
     echo "systemMountedPath='${systemMountedPath}'"
     echo "dataDevice='${dataDevice}'"
     echo "dataSizeGB='${dataSizeGB}'"
+    echo "dataMinGB='${dataMinGB}'"
+    echo "dataWarning='${dataWarning}'"
     echo "dataPartition='${dataPartition}'"
     echo "dataMountedPath='${dataMountedPath}'"
     echo "dataInspectSucess='${dataInspectSucess}'"
