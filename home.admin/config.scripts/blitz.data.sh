@@ -69,7 +69,7 @@ if [ "$1" = "status" ]; then
     dataDevice=""
     storageBlockchainGB=0
     dataInspectSuccess=0
-    dataInspectConfigFound=0
+    dataConfigFound=0
     combinedDataStorage=0
     remainingDevices=0
     
@@ -212,6 +212,12 @@ if [ "$1" = "status" ]; then
                 echo "#  - no data found on partition"
             fi
 
+            # Check: CONFIG FILE
+            if [ -f "${mountPath}/raspiblitz.conf" ] || [ -f "${mountPath}/app-data/raspiblitz.conf" ]; then
+                dataConfigFound=1
+                echo "#    * found raspiblitz.conf"
+            fi
+
             # Datainspect: copy setup relevant data from partition to temp location
             if [ "$dataInspectPartition" = "1" ]; then
                 if [ "$userWantsInspect" = "0" ]; then
@@ -228,7 +234,6 @@ if [ "$1" = "status" ]; then
                     cp -a ${mountPath}/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     cp -a ${mountPath}/app-data/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
                     if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" ]; then
-                        dataInspectConfigFound=1
                         echo "#    * raspiblitz.conf copied to RAMDISK"
                     fi
 
@@ -431,11 +436,11 @@ if [ "$1" = "status" ]; then
         scenario="ready"
 
     # recover: drives there but unmounted & blitz config exists (check raspiblitz.conf with -inspect if its update)
-    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataInspectConfigFound} -eq 1 ]; then
+    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataConfigFound} -eq 1 ]; then
         scenario="recover"
 
     # setup: drives there but unmounted & no blitz config exists 
-    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataInspectConfigFound} -eq 0 ]; then
+    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataConfigFound} -eq 0 ]; then
         scenario="setup"
 
     # UNKNOWN SCENARIO
@@ -466,8 +471,8 @@ if [ "$1" = "status" ]; then
     echo "dataWarning='${dataWarning}'"
     echo "dataPartition='${dataPartition}'"
     echo "dataMountedPath='${dataMountedPath}'"
+    echo "dataConfigFound='${dataConfigFound}'"
     echo "dataInspectSuccess='${dataInspectSuccess}'"
-    echo "dataInspectConfigFound='${dataInspectConfigFound}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
