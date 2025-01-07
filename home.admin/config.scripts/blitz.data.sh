@@ -255,13 +255,16 @@ if [ "$1" = "status" ]; then
         fi
     done <<< "${ext4Partitions}"
 
-    # check boot situation for status
-    if[ ${#storageDevice} -gt 0 ] && [  "${storageDevice}" == "${systemDevice}" ]; then
+    # check boot situation
+    if [ -n "${storageDevice}" ] && [ "${storageDevice}" = "${systemDevice}" ]; then
+        # system runs from storage device
         bootFromStorage=1
         bootFromSD=0
     else
+        # system might run from SD card
         bootFromStorage=0
-        bootFromSD=$(lsblk | grep mmcblk | grep -c /boot)
+        # check if boot partition is on SD card (mmcblk)
+        bootFromSD=$(findmnt -n /boot | grep -c "^/dev/mmcblk")
     fi
     
     # get a list of all connected drives >7GB ordered by size (biggest first)
