@@ -71,6 +71,7 @@ if [ "$1" = "status" ]; then
     dataInspectSucess=0
     dataInspectConfigFound=0
     combinedDataStorage=0
+    remainingDevices=0
     
     # get a list of all existing ext4 partitions of connected storage drives
     ext4Partitions=$(lsblk -no NAME,SIZE,FSTYPE | sed 's/[└├]─//g' | grep -E "^(sd|nvme)" | grep "ext4" | \
@@ -258,7 +259,6 @@ if [ "$1" = "status" ]; then
     # check boot situation
     if [ -n "${storageDevice}" ] && [ "${storageDevice}" = "${systemDevice}" ]; then
         # system runs from storage device
-        echo "# system runs from storage device"
         bootFromStorage=1
         bootFromSD=0
     else
@@ -268,105 +268,100 @@ if [ "$1" = "status" ]; then
         bootFromSD=$(findmnt -n /boot | grep -c "^/dev/mmcblk")
     fi
     
-    # get a list of all connected drives >7GB ordered by size (biggest first)
-    listOfDevices=$(lsblk -dno NAME,SIZE | grep -E "^(sd|nvme)" | \
-    awk '{ 
-    size=$2
-    if(size ~ /T/) { 
-      sub("T","",size); size=size*1024 
-    } else if(size ~ /G/) { 
-      sub("G","",size); size=size*1 
-    } else if(size ~ /M/) { 
-      sub("M","",size); size=size/1024 
-    }
-    if (size >= 7) printf "%s %.0f\n", $1, size
-    }' | sort -k2,2nr -k1,1 )
-    #echo "listOfDevices='${listOfDevices}'"
-
-    # remove lines with already used drives
-    if [ -n "${storageDevice}" ]; then
-        listOfDevices=$(echo "${listOfDevices}" | grep -v "${storageDevice}")
-    fi
-    if [ -n "${systemDevice}" ]; then
-        listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
-    fi
-    if [ -n "${dataDevice}" ]; then
-        listOfDevices=$(echo "${listOfDevices}" | grep -v "${dataDevice}")
-    fi
-    #echo "listOfDevices='${listOfDevices}'"
-
-    # Set STORAGE
+    ########################
+    # PROPOSE LAYOUT
+    # when no storage device yet
     if [ ${#storageDevice} -eq 0 ]; then
-        # when no storage device yet: take the biggest drive as the storage drive
+
+        # get a list of all connected drives >7GB ordered by size (biggest first)
+        listOfDevices=$(lsblk -dno NAME,SIZE | grep -E "^(sd|nvme)" | \
+        awk '{ 
+        size=$2
+        if(size ~ /T/) { 
+        sub("T","",size); size=size*1024 
+        } else if(size ~ /G/) { 
+        sub("G","",size); size=size*1 
+        } else if(size ~ /M/) { 
+        sub("M","",size); size=size/1024 
+        }
+        if (size >= 7) printf "%s %.0f\n", $1, size
+        }' | sort -k2,2nr -k1,1 )
+        #echo "listOfDevices='${listOfDevices}'"
+
+        # when a system drive is found before - remove it from the list
+        if [ ${#systemDevice} -gt 0 ]; then
+            listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
+        fi
+
+        # Set STORAGE (the biggest drive)
         storageDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
         storageSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
         # remove the storage device from the list
         listOfDevices=$(echo "${listOfDevices}" | grep -v "${storageDevice}")
-    fi
 
-    # Set SYSTEM
-
-    if [ ${#systemDevice} -eq 0 ]; then
-
-        # when no system device yet: take the next biggest drive as the system drive
-        systemDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
-        systemSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
-
-        # if there is was no spereated system drive left
+        # Set SYSTEM
         if [ ${#systemDevice} -eq 0 ]; then
 
-            # force RaspberryPi with no NVMe to boot from SD
-            if [ "${computerType}" == "raspberrypi" ] && [ ${gotNVMe} -lt 1 ] ; then
-                bootFromSD=1
+            # when no system device yet: take the next biggest drive as the system drive
+            systemDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
+            systemSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
 
-            # all other systems boot from storage
+            # if there is was no spereated system drive left
+            if [ ${#systemDevice} -eq 0 ]; then
+
+                # force RaspberryPi with no NVMe to boot from SD
+                if [ "${computerType}" == "raspberrypi" ] && [ ${gotNVMe} -lt 1 ] ; then
+                    bootFromSD=1
+
+                # all other systems boot from storage
+                else
+                    echo "# all other systems boot from storage"
+                    bootFromStorage=1
+                fi
+
+            # when seperate system drive is found - check size
             else
-                echo "# all other systems boot from storage"
-                bootFromStorage=1
-            fi
 
-        # when seperate system drive is found - check size
-        else
-
-            # if there is a system drive but its smaller than systemMinGB - boot from storage
-            if [ ${systemSizeGB} -lt ${systemMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
-                echo "# system too small - boot from storage"
+                # if there is a system drive but its smaller than systemMinGB - boot from storage
+                if [ ${systemSizeGB} -lt ${systemMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
+                    echo "# system too small - boot from storage"
                 bootFromStorage=1
 
-            # otherwise remove the system device from the list
-            else
-                listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
-            fi
+                # otherwise remove the system device from the list
+                else
+                    listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
+                fi
 
+            fi
         fi
-    fi
 
-    # Set DATA
-    if [ ${#dataDevice} -eq 0 ]; then
-
-        # when no data device yet: take the second biggest drive as the data drive
-        dataDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
-        dataSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
-
-        # if there is was no spereated data drive - run combine data & storage partiton
+        # Set DATA
         if [ ${#dataDevice} -eq 0 ]; then
-            combinedDataStorage=1
 
-        # if there is a data drive but its smaller than dataMinGB & storage drive is big enough - combine data & storage partiton
-        elif [ ${dataSizeGB} -lt ${dataMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
-            combinedDataStorage=1
-        
-        # remove the data device from the list
-        else
-            listOfDevices=$(echo "${listOfDevices}" | grep -v "${dataDevice}")
+            # when no data device yet: take the second biggest drive as the data drive
+            dataDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
+            dataSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
+
+            # if there is was no spereated data drive - run combine data & storage partiton
+            if [ ${#dataDevice} -eq 0 ]; then
+                combinedDataStorage=1
+
+            # if there is a data drive but its smaller than dataMinGB & storage drive is big enough - combine data & storage partiton
+         elif [ ${dataSizeGB} -lt ${dataMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
+                combinedDataStorage=1
+
+            # remove the data device from the list
+            else
+                listOfDevices=$(echo "${listOfDevices}" | grep -v "${dataDevice}")
+            fi
+
         fi
 
-    fi
+        # count remaining devices 
+        if [ ${#listOfDevices} -gt 0 ]; then
+            remainingDevices=$(echo "${listOfDevices}" | wc -l)
+        fi
 
-    # count remaining devices
-    remainingDevices=0
-    if [ ${#listOfDevices} -gt 0 ]; then
-        remainingDevices=$(echo "${listOfDevices}" | wc -l)
     fi
 
     #################
