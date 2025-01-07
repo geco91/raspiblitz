@@ -332,7 +332,8 @@ if [ "$1" = "status" ]; then
 
             # otherwise remove the system device from the list
             else
-            listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
+                listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
+            fi
 
         fi
     fi
