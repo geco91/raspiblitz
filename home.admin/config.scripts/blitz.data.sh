@@ -62,7 +62,7 @@ if [ "$1" = "status" ]; then
     systemDevice=""
     dataDevice=""
     storageBlockchainGB=0
-    dataInspectDone=0
+    dataInspectSucess=0
     dataInspectConfigFound=0
     combinedDataStorage=0
     
@@ -212,7 +212,7 @@ if [ "$1" = "status" ]; then
 
                     echo "#  - RUN INSPECT -> RAMDISK: /var/cache/raspiblitz/hdd-inspect"
                     mkdir /var/cache/raspiblitz/hdd-inspect 2>/dev/null
-                    dataInspectDone=1
+                    dataInspectSuccess=1
 
                     # make copy of raspiblitz.conf to RAMDISK (try old and new path)
                     cp -a ${mountPath}/raspiblitz.conf /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf 2>/dev/null
@@ -380,7 +380,7 @@ if [ "$1" = "status" ]; then
     echo "dataSizeGB='${dataSizeGB}'"
     echo "dataPartition='${dataPartition}'"
     echo "dataMountedPath='${dataMountedPath}'"
-    echo "dataInspectDone='${dataInspectDone}'"
+    echo "dataInspectSucess='${dataInspectSucess}'"
     echo "dataInspectConfigFound='${dataInspectConfigFound}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
