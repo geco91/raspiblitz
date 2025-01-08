@@ -370,6 +370,12 @@ if [ "$1" = "status" ]; then
             dataDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
             dataSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
 
+            # ignore system device if choosen as data device
+            if [ "${systemDevice}" = "${dataDevice}" ]; then
+                dataDevice=""
+                dataSizeGB=""
+            fi
+
             # if there is was no spereated data drive - run combine data & storage partiton
             if [ ${#dataDevice} -eq 0 ]; then
                 combinedDataStorage=1
