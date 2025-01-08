@@ -431,7 +431,7 @@ if [ "$1" = "status" ]; then
             if [ "$(readlink -f "$dev")" = "/dev/$device" ]; then
                 basename "$dev"
             fi
-        done
+        done | sort | head -n1
     }
 
     # STORAGE
