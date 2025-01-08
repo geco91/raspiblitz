@@ -426,8 +426,9 @@ if [ "$1" = "status" ]; then
 
     # use: find_by_id_filename [DEVICENAME]
     find_by_id_filename() {
-        local device="$1"  # e.g. "sdb"
+        local device="$1"
         for dev in /dev/disk/by-id/*; do
+            echo "# ${dev}"
             if [ "$(readlink -f "$dev")" = "/dev/$device" ]; then
             basename "$dev"
         fi
