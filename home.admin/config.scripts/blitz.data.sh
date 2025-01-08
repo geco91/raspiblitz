@@ -30,7 +30,7 @@ fi
 
 # This script should help to setup & manage those different configurations.
 
-# recommended mining minimal sizes
+# minimal storage sizes (recommended sizes can get checked by UI)
 storagePrunedMinGB=128
 storageFullMinGB=890
 dataMinGB=32
@@ -294,15 +294,10 @@ if [ "$1" = "status" ]; then
         }' | sort -k2,2nr -k1,1 )
         #echo "listOfDevices='${listOfDevices}'"
 
-        # when a system drive is found before - remove it from the list
-        if [ ${#systemDevice} -gt 0 ]; then
-            listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
-        fi
-
         # on laptop ignore identified system drive which is the INSTALL thumb drive on setup
         # on RaspberryPi ignore all systems from thumb drives
         if [ "${computerType}" = "laptop" ] || [ "${computerType}" = "raspberrypi" ]; then
-            echo "# on laptop or RaspberryPi ignore existing system ssd/nvme/ drives"
+            echo "# on laptop or RaspberryPi ignore existing system drives for new setup"
             systemDevice=""
             systemSizeGB=""
             systemPartition=""
