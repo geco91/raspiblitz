@@ -500,7 +500,7 @@ if [ "$1" = "status" ]; then
 
     # UNKNOWN SCENARIO
     else
-        scenario="unknown"
+        scenario="error:unknown-state"
     fi
 
     # output the result
