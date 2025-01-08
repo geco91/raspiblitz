@@ -467,7 +467,7 @@ if [ "$1" = "status" ]; then
 
     # nodata: no drives >64GB connected
     elif [ ${#storageDevice} -eq 0 ]; then
-        scenario="nodata"
+        scenario="no-storage"
 
     # ready: Proxmox VM with all seperated drives mounted
     elif [ ${#storageMountedPath} -gt 0 ]  && [ ${#dataMountedPath} -gt 0 ] && [ ${#systemMountedPath} -gt 0 ]; then
