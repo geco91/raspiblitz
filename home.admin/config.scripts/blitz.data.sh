@@ -176,7 +176,7 @@ if [ "$1" = "status" ]; then
                 fi
 
             # Check SYSTEM DRIVE
-            elif [ -d "${mountPath}/boot" ] && [ -d "${mountPath}/sys" ] && [ ${size} -gt 7 ]; then
+            elif [ -d "${mountPath}/boot" ] && [ -d "${mountPath}/home/admin/raspiblitz" ] && [ ${size} -gt 7 ]; then
 
                 # check for unclean setups
                 if [ -d "${mountPath}/app-storage" ]; then
@@ -302,6 +302,7 @@ if [ "$1" = "status" ]; then
         # on laptop ignore identified system drive which is the INSTALL thumb drive on setup
         # on RaspberryPi ignore all systems from thumb drives
         if [ "${computerType}" = "laptop" ] || [ "${computerType}" = "raspberrypi" ]; then
+            echo "# on laptop or RaspberryPi ignore existing system ssd/nvme/ drives"
             systemDevice=""
             systemSizeGB=""
             systemPartition=""
