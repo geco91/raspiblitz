@@ -325,6 +325,12 @@ if [ "$1" = "status" ]; then
                     bootFromStorage=0
                     bootFromSD=1
 
+                # force RaspberryPi with small NVMe to boot from SD (old NVMe 1TB setups)
+                elif [ "${computerType}" == "raspberrypi" ] && [ ${#storageSizeGB} -gt 0 ]  && [ ${storageSizeGB} -lt $((storageFullMinGB + dataMinGB + systemMinGB)) ] then
+                    echo "# NVMe too small to also host system - keep booting from SD card"
+                    bootFromStorage=0
+                    bootFromSD=1
+
                 # all other systems boot from storage
                 else
                     echo "# all other systems boot from storage"
