@@ -300,7 +300,8 @@ if [ "$1" = "status" ]; then
         fi
 
         # on laptop ignore identified system drive which is the INSTALL thumb drive on setup
-        if [ "${computerType}" = "laptop" ]; then
+        # on RaspberryPi ignore all systems from thumb drives
+        if [ "${computerType}" = "laptop" ] || [ "${computerType}" = "raspberrypi" ]; then
             systemDevice=""
             systemSizeGB=""
             systemPartition=""
