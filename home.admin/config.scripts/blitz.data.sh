@@ -371,17 +371,17 @@ if [ "$1" = "status" ]; then
             dataDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
             dataSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
 
-            # when data drive but no storage
-            if [ ${#storageDevice} -eq 0 ]; then
-                echo "# ERROR: data drive but no storage"
-                scenario="error:system-bigger-than-storage"
-
             # if there is was no spereated data drive - run combine data & storage partiton
             if [ ${#dataDevice} -eq 0 ]; then
                 combinedDataStorage=1
 
+            # when data drive but no storage
+            elif [ ${#storageDevice} -eq 0 ]; then
+                echo "# ERROR: data drive but no storage"
+                scenario="error:system-bigger-than-storage"
+
             # if there is a data drive but its smaller than dataMinGB & storage drive is big enough - combine data & storage partiton
-         elif [ ${dataSizeGB} -lt ${dataMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
+            elif [ ${dataSizeGB} -lt ${dataMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
                 combinedDataStorage=1
 
             # remove the data device from the list
