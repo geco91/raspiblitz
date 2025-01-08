@@ -71,7 +71,6 @@ if [ "$1" = "status" ]; then
     dataInspectSuccess=0
     dataConfigFound=0
     combinedDataStorage=0
-    remainingDevices=0
     
     # get a list of all existing ext4 partitions of connected storage drives
     # cdrom and sd card will get ignored - but it might include install thumb drive on laptops
@@ -380,11 +379,6 @@ if [ "$1" = "status" ]; then
 
         fi
 
-        # count remaining devices 
-        if [ ${#listOfDevices} -gt 0 ]; then
-            remainingDevices=$(echo "${listOfDevices}" | wc -l)
-        fi
-
     fi
 
     #################
@@ -526,7 +520,6 @@ if [ "$1" = "status" ]; then
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
-    echo "remainingDevices='${remainingDevices}'"
 
     exit 0
 fi
