@@ -428,11 +428,11 @@ if [ "$1" = "status" ]; then
     find_by_id_filename() {
         local device="$1"
         for dev in /dev/disk/by-id/*; do
-            echo "# ${dev}"
             if [ "$(readlink -f "$dev")" = "/dev/$device" ]; then
-            basename "$dev"
-        fi
-    done
+                basename "$dev"
+            fi
+        done
+    }
 
     # STORAGE
     if [ ${#storageDevice} -gt 0 ]; then
@@ -448,13 +448,6 @@ if [ "$1" = "status" ]; then
     if [ ${#dataDevice} -gt 0 ]; then
         dataDeviceName=$(find_by_id_filename "${dataDevice}")
     fi
-
-}
-
-# Example usage:
-# find_by_id_filename "sdb"
-
-
 
     #################
     # Define Scenario
