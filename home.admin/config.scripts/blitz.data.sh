@@ -309,8 +309,13 @@ if [ "$1" = "status" ]; then
         # remove the storage device from the list
         listOfDevices=$(echo "${listOfDevices}" | grep -v "${storageDevice}")
 
+        # ech error on VM if system was biggest/only drive
+        if [ "${systemDevice}" = "${storageDevice}" ]; then
+            storageDevice=""
+            storageSizeGB=""
+
         # Set SYSTEM
-        if [ ${#systemDevice} -eq 0 ]; then
+        elif [ ${#systemDevice} -eq 0 ]; then
 
             # when no system device yet: take the next biggest drive as the system drive
             systemDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
