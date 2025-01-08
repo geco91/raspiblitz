@@ -309,8 +309,10 @@ if [ "$1" = "status" ]; then
         # remove the storage device from the list
         listOfDevices=$(echo "${listOfDevices}" | grep -v "${storageDevice}")
 
-        # ech error on VM if system was biggest/only drive
+        # no storage device found
         if [ "${systemDevice}" = "${storageDevice}" ]; then
+            echo "# ERROR: no free storage found"
+            scenario="error:no-storage"
             storageDevice=""
             storageSizeGB=""
 
@@ -368,6 +370,11 @@ if [ "$1" = "status" ]; then
             # when no data device yet: take the second biggest drive as the data drive
             dataDevice=$(echo "${listOfDevices}" | head -n1 | awk '{print $1}')
             dataSizeGB=$(echo "${listOfDevices}" | head -n1 | awk '{print $2}')
+
+            # when data drive but no storage
+            if [ ${#storageDevice} -eq 0 ]; then
+                echo "# ERROR: data drive but no storage"
+                scenario="error:system-bigger-than-storage"
 
             # if there is was no spereated data drive - run combine data & storage partiton
             if [ ${#dataDevice} -eq 0 ]; then
@@ -459,15 +466,17 @@ if [ "$1" = "status" ]; then
 
     #################
     # Define Scenario
-    scenario="unknown"
 
     # migration: detected data from another node implementation
-    if [ ${#storageMigration} -gt 0 ]; then
+    if [ ${#scenario} -gt 0 ]; then
+        echo "# scenario already set by analysis above to: ${scenario}"
+       
+    elif [ ${#storageMigration} -gt 0 ]; then
         scenario="migration"
 
     # nodata: no drives >64GB connected
     elif [ ${#storageDevice} -eq 0 ]; then
-        scenario="no-storage"
+        scenario="error:no-storage"
 
     # ready: Proxmox VM with all seperated drives mounted
     elif [ ${#storageMountedPath} -gt 0 ]  && [ ${#dataMountedPath} -gt 0 ] && [ ${#systemMountedPath} -gt 0 ]; then
