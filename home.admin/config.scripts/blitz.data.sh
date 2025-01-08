@@ -74,6 +74,7 @@ if [ "$1" = "status" ]; then
     remainingDevices=0
     
     # get a list of all existing ext4 partitions of connected storage drives
+    # cdrom and sd card will get ignored - but it might include install thumb drive on laptops
     ext4Partitions=$(lsblk -no NAME,SIZE,FSTYPE | sed 's/[└├]─//g' | grep -E "^(sd|nvme)" | grep "ext4" | \
     awk '{ 
         size=$2
@@ -275,7 +276,7 @@ if [ "$1" = "status" ]; then
     
     ########################
     # PROPOSE LAYOUT
-    # when no storage device yet
+    # before setup - when there is no storage device yet
     if [ ${#storageDevice} -eq 0 ]; then
 
         # get a list of all connected drives >7GB ordered by size (biggest first)
@@ -296,6 +297,14 @@ if [ "$1" = "status" ]; then
         # when a system drive is found before - remove it from the list
         if [ ${#systemDevice} -gt 0 ]; then
             listOfDevices=$(echo "${listOfDevices}" | grep -v "${systemDevice}")
+        fi
+
+        # on laptop ignore identified system drive which is the INSTALL thumb drive on setup
+        if [ "${computerType}" = "laptop" ]; then
+            systemDevice=""
+            systemSizeGB=""
+            systemPartition=""
+            systemMountedPath=""
         fi
 
         # Set STORAGE (the biggest drive)
@@ -340,7 +349,7 @@ if [ "$1" = "status" ]; then
             fi
         fi
 
-        # Set DATA
+        # Set DATA (check last, because it more common to have STORAGE & DATA combined)
         if [ ${#dataDevice} -eq 0 ]; then
 
             # when no data device yet: take the second biggest drive as the data drive
