@@ -422,6 +422,40 @@ if [ "$1" = "status" ]; then
     fi
 
     #################
+    # Device Names
+
+    # use: find_by_id_filename [DEVICENAME]
+    find_by_id_filename() {
+        local device="$1"  # e.g. "sdb"
+        for dev in /dev/disk/by-id/*; do
+            if [ "$(readlink -f "$dev")" = "/dev/$device" ]; then
+            basename "$dev"
+        fi
+    done
+
+    # STORAGE
+    if [ ${#storageDevice} -gt 0 ]; then
+        storageDeviceName=$(find_by_id_filename "${storageDevice}")
+    fi
+
+    # SYSTEM
+    if [ ${#systemDevice} -gt 0 ]; then
+        systemDeviceName=$(find_by_id_filename "${systemDevice}")
+    fi
+
+    # DATA
+    if [ ${#dataDevice} -gt 0 ]; then
+        dataDeviceName=$(find_by_id_filename "${dataDevice}")
+    fi
+
+}
+
+# Example usage:
+# find_by_id_filename "sdb"
+
+
+
+    #################
     # Define Scenario
     scenario="unknown"
 
@@ -461,6 +495,7 @@ if [ "$1" = "status" ]; then
     # output the result
     echo "scenario='${scenario}'"
     echo "storageDevice='${storageDevice}'"
+    echo "storageDeviceName='${storageDeviceName}'"
     echo "storageSizeGB='${storageSizeGB}'"
     echo "storagePrunedMinGB='${storagePrunedMinGB}'"
     echo "storageFullMinGB='${storageFullMinGB}'"
@@ -470,12 +505,14 @@ if [ "$1" = "status" ]; then
     echo "storageBlockchainGB='${storageBlockchainGB}'"
     echo "storageMigration='${storageMigration}'"
     echo "systemDevice='${systemDevice}'"
+    echo "systemDeviceName='${systemDeviceName}'"
     echo "systemSizeGB='${systemSizeGB}'"
     echo "systemMinGB='${systemMinGB}'"
     echo "systemWarning='${systemWarning}'"
     echo "systemPartition='${systemPartition}'"
     echo "systemMountedPath='${systemMountedPath}'"
     echo "dataDevice='${dataDevice}'"
+    echo "dataDeviceName='${dataDeviceName}'"
     echo "dataSizeGB='${dataSizeGB}'"
     echo "dataMinGB='${dataMinGB}'"
     echo "dataWarning='${dataWarning}'"
