@@ -322,12 +322,14 @@ if [ "$1" = "status" ]; then
 
                 # force RaspberryPi with no NVMe to boot from SD
                 if [ "${computerType}" == "raspberrypi" ] && [ ${gotNVMe} -lt 1 ] ; then
+                    bootFromStorage=0
                     bootFromSD=1
 
                 # all other systems boot from storage
                 else
                     echo "# all other systems boot from storage"
                     bootFromStorage=1
+                    bootFromSD=0
                 fi
 
             # when seperate system drive is found - check size
@@ -335,7 +337,8 @@ if [ "$1" = "status" ]; then
 
                 # if there is a system drive but its smaller than systemMinGB - boot from storage
                 if [ ${systemSizeGB} -lt ${systemMinGB} ] && [ ${storageSizeGB} -gt ${storagePrunedMinGB} ]; then
-                    echo "# system too small - boot from storage"
+                    echo "# seprate system too small - boot from storage"
+                    bootFromSD=0
                     bootFromStorage=1
                     systemDevice=""
                     systemSizeGB=""
