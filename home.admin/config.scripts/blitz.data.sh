@@ -309,9 +309,8 @@ if [ "$1" = "status" ]; then
         # remove the storage device from the list
         listOfDevices=$(echo "${listOfDevices}" | grep -v "${storageDevice}")
 
-        # no storage device found
+        # no storage device found (system seems only device)
         if [ "${systemDevice}" = "${storageDevice}" ]; then
-            echo "# ERROR: no free storage found"
             scenario="error:no-storage"
             storageDevice=""
             storageSizeGB=""
