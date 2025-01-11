@@ -194,6 +194,7 @@ if [ -n "${general_utils_install}" ]; then
   echo -e "\n*** SOFTWARE UPDATE ***"
 
   # add sources if not present
+  echo -e "checking/adding sources ..."
   for SOURCE in "${REQUIRED_SOURCES[@]}"; do
     if ! grep -Fxq "$SOURCE" /etc/apt/sources.list; then
       echo "Adding  Source: $SOURCE"
