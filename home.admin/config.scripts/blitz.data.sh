@@ -316,6 +316,7 @@ if [ "$1" = "status" ]; then
             storageSizeGB=""
 
             if [ "${computerType}" = "pc" ]; then
+                echo "# on bare metal PC - storage device is the system boot device"
                 bootFromStorage=1
                 bootFromSD=0
             fi
