@@ -309,17 +309,17 @@ if [ "$1" = "status" ]; then
         # remove the storage device from the list
         listOfDevices=$(echo "${listOfDevices}" | grep -v "${storageDevice}")
 
+        if [ ${#storageDevice} -gt 0 ] && [ "${computerType}" = "pc" ]; then
+            echo "# on bare metal PC - storage device is the system boot device"
+            bootFromStorage=1
+            bootFromSD=0
+        fi
+
         # no storage device found (system seems only device)
         if [ "${systemDevice}" = "${storageDevice}" ]; then
             scenario="error:no-storage"
             storageDevice=""
             storageSizeGB=""
-
-            if [ "${computerType}" = "pc" ]; then
-                echo "# on bare metal PC - storage device is the system boot device"
-                bootFromStorage=1
-                bootFromSD=0
-            fi
 
         # Set SYSTEM
         elif [ ${#systemDevice} -eq 0 ]; then
