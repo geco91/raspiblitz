@@ -192,16 +192,6 @@ done
 ## if any of the required programs are not installed, update and if successfull, install packages
 if [ -n "${general_utils_install}" ]; then
   echo -e "\n*** SOFTWARE UPDATE ***"
-
-  # add sources if not present
-  echo -e "checking/adding sources ..."
-  for SOURCE in "${REQUIRED_SOURCES[@]}"; do
-    if ! grep -Fxq "$SOURCE" /etc/apt/sources.list; then
-      echo "Adding  Source: $SOURCE"
-      echo "$SOURCE" | sudo tee -a /etc/apt/sources.list > /dev/null
-    fi
-  done
-
   apt-get update -y || exit 1
   apt_install ${general_utils_install}
 fi
@@ -366,7 +356,15 @@ apt-get autoremove -y
 
 grep -q "^nameserver 8.8.8.8$" /etc/resolv.conf || echo "nameserver 8.8.8.8" >> /etc/resolv.conf
 
-echo -e "\n*** UPDATE Debian***"
+echo -e "\n*** UPDATE Debian***"  # add sources if not present
+echo -e "checking/adding sources ..."
+for SOURCE in "${REQUIRED_SOURCES[@]}"; do
+  if ! grep -Fxq "$SOURCE" /etc/apt/sources.list; then
+    echo "Adding  Source: $SOURCE"
+    echo "$SOURCE" | sudo tee -a /etc/apt/sources.list > /dev/null
+  fi
+done
+
 apt-get update -y
 apt-get upgrade -f -y
 
