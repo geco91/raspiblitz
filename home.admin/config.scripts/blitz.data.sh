@@ -315,6 +315,11 @@ if [ "$1" = "status" ]; then
             storageDevice=""
             storageSizeGB=""
 
+            if [ "${computerType}" = "pc" ]; then
+                bootFromStorage=1
+                bootFromSD=0
+            fi
+
         # Set SYSTEM
         elif [ ${#systemDevice} -eq 0 ]; then
 
@@ -428,7 +433,7 @@ if [ "$1" = "status" ]; then
     fi
 
     # SYSTEM
-    if [ ${#systemDevice} -gt 0 ]; then
+    if [ ${#systemDevice} -gt 0 ] && [ ${bootFromStorage} -eq 0 ]; then
         if [ ${systemSizeGB} -lt $((systemMinGB - 1)) ]; then
             systemWarning='too-small'
         fi
