@@ -10,6 +10,16 @@
 # setup fresh SD card with image above - login via SSH and run this script:
 ##########################################################################
 
+# debian sources
+REQUIRED_SOURCES=(
+  "deb http://deb.debian.org/debian bookworm main contrib non-free"
+  "deb-src http://deb.debian.org/debian bookworm main contrib non-free"
+  "deb http://security.debian.org/debian-security bookworm-security main contrib non-free"
+  "deb-src http://security.debian.org/debian-security bookworm-security main contrib non-free"
+  "deb http://deb.debian.org/debian bookworm-updates main contrib non-free"
+  "deb-src http://deb.debian.org/debian bookworm-updates main contrib non-free"
+)
+
 # set locale to en_US.UTF-8 on system & activate for this script
 echo "# updating locale ..."
 sed -i "s/^# en_US.UTF-8 UTF-8.*/en_US.UTF-8 UTF-8/g" /etc/locale.gen
@@ -185,6 +195,15 @@ done
 ## if any of the required programs are not installed, update and if successfull, install packages
 if [ -n "${general_utils_install}" ]; then
   echo -e "\n*** SOFTWARE UPDATE ***"
+
+  # add sources if not present
+  for SOURCE in "${REQUIRED_SOURCES[@]}"; do
+    if ! grep -Fxq "$SOURCE" /etc/apt/sources.list; then
+      echo "Adding  Source: $SOURCE"
+      echo "$SOURCE" | sudo tee -a /etc/apt/sources.list > /dev/null
+    fi
+  done
+
   apt-get update -y || exit 1
   apt_install ${general_utils_install}
 fi
