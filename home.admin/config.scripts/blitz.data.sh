@@ -622,6 +622,8 @@ if [ "$1" = "setup" ]; then
 
     # SYSTEM (single drive)
     elif [ setupType="SEPERATE-SYSTEM" ]; then
+        echo "# SYSTEM"
+        echo "# .. partitioning"
         wipefs -a /dev/${setupDevice}
         parted /dev/${setupDevice} --script mklabel msdos
         parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 100%
@@ -632,10 +634,13 @@ if [ "$1" = "setup" ]; then
 
     # STOARGE with System
     elif [ setupType="STORAGE" ] && [ ${setupBootFromStorage} -eq 1 ]; then
+        echo "# STORAGE (with system)"
+        echo "# .. partitioning"
         wipefs -a /dev/${setupDevice}
         parted /dev/${setupDevice} --script mklabel msdos
         parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 513MiB
         parted /dev/${setupDevice} --script mkpart primary ext4 541MB 100%
+        echo "# .. formating"
         wipefs -a /dev/${setupDevicePartitionBase}1
         mkfs -t vfat -F 32  /dev/${setupDevicePartitionBase}1
         wipefs -a /dev/${setupDevicePartitionBase}2
@@ -645,17 +650,23 @@ if [ "$1" = "setup" ]; then
 
     # STOARGE (single drive OR host for seperate data & system)
     elif [ setupType="STORAGE" ] && [ ${setupBootFromStorage} -eq 0 ]; then
+        echo "# STORAGE"
+        echo "# .. partitioning"
         wipefs -a /dev/${setupDevice}
         parted /dev/${setupDevice} --script mklabel msdos
         parted /dev/${setupDevice} --script mkpart primary ext4 1MB 100%
+        echo "# .. formating"
         wipefs -a /dev/${setupDevicePartitionBase}1
         mkfs -t ext4  /dev/${setupDevicePartitionBase}1
 
     # DATA (single drive)
     elif [ setupType="SEPERATE-DATA" ]; then
+        echo "# DATA"
+        echo "# .. partitioning"
         wipefs -a /dev/${setupDevice}
         parted /dev/${setupDevice} --script mklabel msdos
         parted /dev/${setupDevice} --script mkpart primary ext4 1MB 100%
+        echo "# .. formating"
         wipefs -a /dev/${setupDevicePartitionBase}1
         mkfs -t ext4  /dev/${setupDevicePartitionBase}1
 
@@ -694,10 +705,6 @@ if [ "$1" = "setup" ]; then
             parted /dev/${setupDevice} --script set 1 esp on
             isFlagSetBOOT=$(parted /dev/${setupDevice} --script print | grep -c 'fat32.*boot')
             isFlagSetESP=$(parted /dev/${setupDevice} --script print | grep -c 'fat32.*esp')
-            if [ ${isFlagSetESP} -eq 0 ]; then
-                echo "error='failed to set ESP flag'"
-                exit 1
-            fi
         fi
     else
         echo "# skipping: Bootable"
