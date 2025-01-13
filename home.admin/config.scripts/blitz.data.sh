@@ -621,27 +621,29 @@ if [ "$1" = "setup" ]; then
     # PARTITION & FORMAT
 
     # SYSTEM (single drive)
-    if [ setupType="SEPERATE-SYSTEM" ]; then
+    if [ "${setupType}"="SEPERATE-SYSTEM" ]; then
         echo "# SYSTEM"
-        echo "# .. partitioning"
-        sfdisk --delete /dev/${setupDevice} 2>/dev/null
-        wipefs -a /dev/${setupDevice} 2>/dev/null
-        parted /dev/${setupDevice} --script mklabel msdos
-        parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 100%
-        wipefs -a /dev/${setupDevicePartitionBase}1 2>/dev/null
-        mkfs -t vfat -F 32  /dev/${setupDevicePartitionBase}1
-        wipefs -a /dev/${setupDevicePartitionBase}2 2>/dev/null
-        mkfs -t ext4  /dev/${setupDevicePartitionBase}2
-
-    # STOARGE with System
-    elif [ setupType="STORAGE" ] && [ ${setupBootFromStorage} -eq 1 ]; then
-        echo "# STORAGE (with system)"
         echo "# .. partitioning"
         sfdisk --delete /dev/${setupDevice} 2>/dev/null
         wipefs -a /dev/${setupDevice} 2>/dev/null
         parted /dev/${setupDevice} --script mklabel msdos
         parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 513MiB
         parted /dev/${setupDevice} --script mkpart primary ext4 541MB 100%
+        wipefs -a /dev/${setupDevicePartitionBase}1 2>/dev/null
+        mkfs -t vfat -F 32  /dev/${setupDevicePartitionBase}1
+        wipefs -a /dev/${setupDevicePartitionBase}2 2>/dev/null
+        mkfs -t ext4  /dev/${setupDevicePartitionBase}2
+
+    # STOARGE with System
+    elif [ "${setupType}"="STORAGE" ] && [ ${setupBootFromStorage} -eq 1 ]; then
+        echo "# STORAGE (with system)"
+        echo "# .. partitioning"
+        sfdisk --delete /dev/${setupDevice} 2>/dev/null
+        wipefs -a /dev/${setupDevice} 2>/dev/null
+        parted /dev/${setupDevice} --script mklabel msdos
+        parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 513MiB
+        parted /dev/${setupDevice} --script mkpart primary ext4 541MB 65GB
+        parted /dev/${setupDevice} --script mkpart primary ext4 65GB 100%
         echo "# .. formating"
         wipefs -a /dev/${setupDevicePartitionBase}1 2>/dev/null
         mkfs -t vfat -F 32  /dev/${setupDevicePartitionBase}1
@@ -651,7 +653,7 @@ if [ "$1" = "setup" ]; then
         mkfs -t ext4  /dev/${setupDevicePartitionBase}3
 
     # STOARGE (single drive OR host for seperate data & system)
-    elif [ setupType="STORAGE" ] && [ ${setupBootFromStorage} -eq 0 ]; then
+    elif [ "${setupType}"="STORAGE" ] && [ ${setupBootFromStorage} -eq 0 ]; then
         echo "# STORAGE"
         echo "# .. partitioning"
         sfdisk --delete /dev/${setupDevice} 2>/dev/null
@@ -663,7 +665,7 @@ if [ "$1" = "setup" ]; then
         mkfs -t ext4  /dev/${setupDevicePartitionBase}1
 
     # DATA (single drive)
-    elif [ setupType="SEPERATE-DATA" ]; then
+    elif [ "${setupType}"="SEPERATE-DATA" ]; then
         echo "# DATA"
         echo "# .. partitioning"
         sfdisk --delete /dev/${setupDevice} 2>/dev/null
