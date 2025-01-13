@@ -710,6 +710,8 @@ if [ "$1" = "setup" ]; then
         echo "# skipping: Bootable"
     fi
 
+    exit 1
+
     ##########################
     # COPY SYSTEM
 
@@ -723,9 +725,11 @@ if [ "$1" = "setup" ]; then
         fi
         mkdir -p /mnt/disk_boot 2>/dev/null
         mount /dev/${setupDevicePartitionBase}1 /mnt/disk_boot
-        rsync -avh --delete ${bootPath} /mnt/disk_boot/
+        echo "# .. copy boot"
+        rsync -avh --delete --info=progress2 ${bootPath} /mnt/disk_boot/
 
         # copy the system drive
+        echo "# .. copy system"
         mkdir -p /mnt/disk_system 2>/dev/null
         mount /dev/${setupDevicePartitionBase}2 /mnt/disk_system
         rsync -axHAX --delete --info=progress2\
