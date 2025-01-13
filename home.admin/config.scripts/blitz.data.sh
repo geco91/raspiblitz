@@ -584,7 +584,7 @@ if [ "$1" = "setup" ]; then
     setupCombinedData=$4
     if [ ${#setupCombinedData} -gt 0 ] &&  [ "${setupCombinedData}" != "combinedData=1" ] && [ "${setupCombinedData}" != "0" ] && [ "${setupCombinedData}" != "1" ]; then
         echo "error='combinedData(${setupCombinedData})'"
-        echo "error='combinedData not supported'"
+        echo "error='combinedData value not supported'"
         exit 1
     fi
     if [ "${setupCombinedData}" = "combinedData=1" ] || [ "${setupCombinedData}" = "1" ]; then
@@ -597,7 +597,7 @@ if [ "$1" = "setup" ]; then
     setupBootFromStorage=$5
     if [ ${#setupBootFromStorage} -gt 0 ] && [ "${setupBootFromStorage}" != "bootFromStorage=0" ] && [ "${setupBootFromStorage}" != "bootFromStorage=1" ] && [ "${setupBootFromStorage}" != "0" ] && [ "${setupBootFromStorage}" != "1" ]; then
         echo "error='bootFromStorage(${setupBootFromStorage})'"
-        echo "error='bootFromStorage not supported'"
+        echo "error='bootFromStorage value not supported'"
         exit 1
     fi
     if [ "${setupBootFromStorage}" = "bootFromStorage=1" ] || [ "${setupBootFromStorage}" = "1" ]; then
