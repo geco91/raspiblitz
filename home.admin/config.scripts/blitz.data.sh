@@ -712,13 +712,19 @@ if [ "$1" = "setup" ]; then
             parted /dev/${setupDevice} --script set 1 boot on
             parted /dev/${setupDevice} --script set 1 esp on
             isFlagSetBOOT=$(parted /dev/${setupDevice} --script print | grep -c 'fat32.*boot')
+            if [ ${isFlagSetBOOT} -eq 0 ]; then
+                echo "error='failed to set BOOT flag'"
+                exit 1
+            fi
             isFlagSetESP=$(parted /dev/${setupDevice} --script print | grep -c 'fat32.*esp')
+            if [ ${isFlagSetESP} -eq 0 ]; then
+                echo "error='failed to set ESP flag'"
+                exit 1
+            fi
         fi
     else
         echo "# skipping: Bootable"
     fi
-
-    exit 1
 
     ##########################
     # COPY SYSTEM
