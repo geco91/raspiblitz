@@ -624,6 +624,7 @@ if [ "$1" = "setup" ]; then
     if [ setupType="SEPERATE-SYSTEM" ]; then
         echo "# SYSTEM"
         echo "# .. partitioning"
+        sfdisk --delete /dev/${setupDevice} 2>/dev/null
         wipefs -a /dev/${setupDevice} 2>/dev/null
         parted /dev/${setupDevice} --script mklabel msdos
         parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 100%
@@ -636,6 +637,7 @@ if [ "$1" = "setup" ]; then
     elif [ setupType="STORAGE" ] && [ ${setupBootFromStorage} -eq 1 ]; then
         echo "# STORAGE (with system)"
         echo "# .. partitioning"
+        sfdisk --delete /dev/${setupDevice} 2>/dev/null
         wipefs -a /dev/${setupDevice} 2>/dev/null
         parted /dev/${setupDevice} --script mklabel msdos
         parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 513MiB
@@ -652,6 +654,7 @@ if [ "$1" = "setup" ]; then
     elif [ setupType="STORAGE" ] && [ ${setupBootFromStorage} -eq 0 ]; then
         echo "# STORAGE"
         echo "# .. partitioning"
+        sfdisk --delete /dev/${setupDevice} 2>/dev/null
         wipefs -a /dev/${setupDevice} 2>/dev/null
         parted /dev/${setupDevice} --script mklabel msdos
         parted /dev/${setupDevice} --script mkpart primary ext4 1MB 100%
@@ -663,6 +666,7 @@ if [ "$1" = "setup" ]; then
     elif [ setupType="SEPERATE-DATA" ]; then
         echo "# DATA"
         echo "# .. partitioning"
+        sfdisk --delete /dev/${setupDevice} 2>/dev/null
         wipefs -a /dev/${setupDevice} 2>/dev/null
         parted /dev/${setupDevice} --script mklabel msdos
         parted /dev/${setupDevice} --script mkpart primary ext4 1MB 100%
