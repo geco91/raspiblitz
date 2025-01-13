@@ -621,7 +621,7 @@ if [ "$1" = "setup" ]; then
     # PARTITION & FORMAT
 
     # SYSTEM (single drive)
-    if [ "${setupType}"="SEPERATE-SYSTEM" ]; then
+    if [ "${setupType}" = "SEPERATE-SYSTEM" ]; then
         echo "# SYSTEM"
         echo "# .. partitioning"
         sfdisk --delete /dev/${setupDevice} 2>/dev/null
@@ -635,7 +635,7 @@ if [ "$1" = "setup" ]; then
         mkfs -t ext4  /dev/${setupDevicePartitionBase}2
 
     # STOARGE with System
-    elif [ "${setupType}"="STORAGE" ] && [ ${setupBootFromStorage} -eq 1 ]; then
+    elif [ "${setupType}" = "STORAGE" ] && [ ${setupBootFromStorage} -eq 1 ]; then
         echo "# STORAGE (with system)"
         echo "# .. partitioning"
         sfdisk --delete /dev/${setupDevice} 2>/dev/null
@@ -653,7 +653,7 @@ if [ "$1" = "setup" ]; then
         mkfs -t ext4  /dev/${setupDevicePartitionBase}3
 
     # STOARGE (single drive OR host for seperate data & system)
-    elif [ "${setupType}"="STORAGE" ] && [ ${setupBootFromStorage} -eq 0 ]; then
+    elif [ "${setupType}" = "STORAGE" ] && [ ${setupBootFromStorage} -eq 0 ]; then
         echo "# STORAGE"
         echo "# .. partitioning"
         sfdisk --delete /dev/${setupDevice} 2>/dev/null
@@ -665,7 +665,7 @@ if [ "$1" = "setup" ]; then
         mkfs -t ext4  /dev/${setupDevicePartitionBase}1
 
     # DATA (single drive)
-    elif [ "${setupType}"="SEPERATE-DATA" ]; then
+    elif [ "${setupType}" = "SEPERATE-DATA" ]; then
         echo "# DATA"
         echo "# .. partitioning"
         sfdisk --delete /dev/${setupDevice} 2>/dev/null
