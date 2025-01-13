@@ -557,10 +557,195 @@ fi
 if [ "$1" = "setup" ]; then
     echo "# blitz.data.sh setup"
 
-    # replace format, fstab & link (maybe there is some same linking as in recover)
+    # check that it is a valid setup type: STORAGE, SEPERATE-DATA, SEPERATE-SYSTEM
+    setupType=$2
+    if [ "${setupType}" != "STORAGE" ] && [ "${setupType}" != "SEPERATE-DATA" ] && [ "${setupType}" != "SEPERATE-SYSTEM" ]; then
+        echo "# setupType(${setupType})"
+        echo "error='setup type not supported'"
+        exit 1
+    fi
 
-    echo "error='TODO'"
+    # check that device is set & exists & not mounted
+    setupDevice=$3
+    if [ ${#setupDevice} -eq 0 ]; then
+        echo "error='missing device'"
+        exit 1
+    fi
+    if ! lsblk -no NAME | grep -q "${setupDevice}$"; then
+        echo "error='device not found'"
+        exit 1
+    fi
+    if findmnt -n -o TARGET "/dev/${setupDevice}" 2>/dev/null; then
+        echo "error='device is mounted'"
+        exit 1
+    fi
+
+    # check if data should also be combined with storage
+    setupCombinedData=$4
+    if [ "${setupCombinedData}" != "combinedData=0" ] && [ "${setupCombinedData}" != "combinedData=1" ] && [ "${setupCombinedData}" != "0" ] && [ "${setupCombinedData}" != "1" ]; then
+        echo "error='combinedData(${setupCombinedData})'"
+        echo "error='combinedData not supported'"
+        exit 1
+    fi
+    setupCombinedData=0
+    if [ "${setupCombinedData}" = "combinedData=1" ] || [ "${setupCombinedData}" = "1" ]; then
+        setupCombinedData=1
+    fi
+
+    # check if boot should be from storage
+    setupBootFromStorage=$5
+    if [ "${setupBootFromStorage}" != "bootFromStorage=0" ] && [ "${setupBootFromStorage}" != "bootFromStorage=1" ] && [ "${setupBootFromStorage}" != "0" ] && [ "${setupBootFromStorage}" != "1" ]; then
+        echo "error='bootFromStorage(${setupBootFromStorage})'"
+        echo "error='bootFromStorage not supported'"
+        exit 1
+    fi
+    setupBootFromStorage=0
+    if [ "${setupBootFromStorage}" = "bootFromStorage=1" ] || [ "${setupBootFromStorage}" = "1" ]; then
+        setupBootFromStorage=1
+    fi
+
+    # determine the partition base name
+    setupDevicePartitionBase=${setupDevice}
+    if [[ "${setupDevice}" =~ ^nvme ]]; then
+        setupDevicePartitionBase="${setupDevice}p"
+    fi
+
+    # debug info
+    echo "# setupType(${setupType})"
+    echo "# setupDevice(${setupDevice})"
+    echo "# setupDevicePartitionBase(${setupDevicePartitionBase})"
+    echo "# setupBootFromStorage(${setupBootFromStorage})"
+    echo "# setupCombinedData(${setupCombinedData})"
+
+    ##########################
+    # PARTITION & FORMAT
+
+    # SYSTEM (single drive)
+    elif [ setupType="SEPERATE-SYSTEM" ]; then
+        wipefs -a /dev/${setupDevice}
+        parted /dev/${setupDevice} --script mklabel msdos
+        parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 100%
+        wipefs -a /dev/${setupDevicePartitionBase}1
+        mkfs -t vfat -F 32  /dev/${setupDevicePartitionBase}1
+        wipefs -a /dev/${setupDevicePartitionBase}2
+        mkfs -t ext4  /dev/${setupDevicePartitionBase}2
+
+    # STOARGE with System
+    elif [ setupType="STORAGE" ] && [ ${setupBootFromStorage} -eq 1 ]; then
+        wipefs -a /dev/${setupDevice}
+        parted /dev/${setupDevice} --script mklabel msdos
+        parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 513MiB
+        parted /dev/${setupDevice} --script mkpart primary ext4 541MB 100%
+        wipefs -a /dev/${setupDevicePartitionBase}1
+        mkfs -t vfat -F 32  /dev/${setupDevicePartitionBase}1
+        wipefs -a /dev/${setupDevicePartitionBase}2
+        mkfs -t ext4  /dev/${setupDevicePartitionBase}2
+        wipefs -a /dev/${setupDevicePartitionBase}3
+        mkfs -t ext4  /dev/${setupDevicePartitionBase}3
+
+    # STOARGE (single drive OR host for seperate data & system)
+    elif [ setupType="STORAGE" ] && [ ${setupBootFromStorage} -eq 0 ]; then
+        wipefs -a /dev/${setupDevice}
+        parted /dev/${setupDevice} --script mklabel msdos
+        parted /dev/${setupDevice} --script mkpart primary ext4 1MB 100%
+        wipefs -a /dev/${setupDevicePartitionBase}1
+        mkfs -t ext4  /dev/${setupDevicePartitionBase}1
+
+    # DATA (single drive)
+    elif [ setupType="SEPERATE-DATA" ]; then
+        wipefs -a /dev/${setupDevice}
+        parted /dev/${setupDevice} --script mklabel msdos
+        parted /dev/${setupDevice} --script mkpart primary ext4 1MB 100%
+        wipefs -a /dev/${setupDevicePartitionBase}1
+        mkfs -t ext4  /dev/${setupDevicePartitionBase}1
+
+    else
+        echo "error='setup type not supported'"
+        exit 1
+    fi
+
+    ##########################
+    # MAKE BOOTABLE
+
+    if [ setupType="SEPERATE-SYSTEM" ] || [ ${setupBootFromStorage} -eq 1 ]; then
+        echo "# MAKE BOOTABLE"
+        if [ "${computerType}" = "raspberrypi" ]; then
+            echo "# RaspberryPi - set LBA flag"
+            parted /dev/${setupDevice} --script set 1 lba on
+            isFlagSetLBA=$(parted /dev/${setupDevice} --script print | grep -c 'fat32.*lba')
+            if [ ${isFlagSetLBA} -eq 0 ]; then
+                echo "error='failed to set LBA flag'"
+                exit 1
+            fi
+            echo "# RaspberryPi - Bootorder"
+            isBootOrderSet=$(sudo rpi-eeprom-config | grep -cx "BOOT_ORDER=0xf461")
+            if [ ${isBootOrderSet} -eq 0 ]; then
+                echo "# .. changeing Bootorder"
+                rpi-eeprom-config --out bootconf.txt
+                sed -i '/^BOOT_ORDER=/d' ./bootconf.txt && sudo sh -c 'echo "BOOT_ORDER=0xf461" >> ./bootconf.txt'
+                rpi-eeprom-config --apply bootconf.txt
+                rm bootconf.txt
+            else
+                echo "# .. Bootorder already set"
+            fi
+        else
+            echo "# VM & PC - set BOOT/ESP flag"
+            parted /dev/${setupDevice} --script set 1 boot on
+            parted /dev/${setupDevice} --script set 1 esp on
+            isFlagSetBOOT=$(parted /dev/${setupDevice} --script print | grep -c 'fat32.*boot')
+            if [ ${isFlagSetBOOT} -eq 0 ]; then
+                echo "error='failed to set BOOT flag'"
+                exit 1
+            fi
+            isFlagSetESP=$(parted /dev/${setupDevice} --script print | grep -c 'fat32.*esp')
+            if [ ${isFlagSetESP} -eq 0 ]; then
+                echo "error='failed to set ESP flag'"
+                exit 1
+            fi
+        fi
+    else
+        echo "# skipping: Bootable"
+    fi
+
+    ##########################
+    # COPY SYSTEM
+
+    if [ setupType="SEPERATE-SYSTEM" ] || [ ${setupBootFromStorage} -eq 1 ]; then
+        echo "# SYSTEM COPY"
+
+        # copy the boot drive
+        bootPath="/boot/"
+        if [ "${computerType}" = "raspberrypi" ]; then
+            bootPath="/boot/firmware/"
+        fi
+        mkdir -p /mnt/disk_boot 2>/dev/null
+        mount /dev/${setupDevicePartitionBase}1 /mnt/disk_boot
+        rsync -avh --delete ${bootPath} /mnt/disk_boot/
+
+        # copy the system drive
+        mkdir -p /mnt/disk_system 2>/dev/null
+        mount /dev/${setupDevicePartitionBase}2 /mnt/disk_system
+        rsync -axHAX --delete --info=progress2\
+            --exclude=/dev/* \
+            --exclude=/proc/* \
+            --exclude=/sys/* \
+            --exclude=/tmp/* \
+            --exclude=/run/* \
+            --exclude=/mnt/* \
+            --exclude=/media/* \
+            --exclude=/boot/* \
+            --exclude=/lost+found \
+            --exclude=/var/cache/* \
+            --exclude=/var/tmp/* \
+            --exclude=/var/log/* \
+            / /mnt/disk_root/
+            echo "# OK - System copied"
+    else
+        echo "# skipping: SystemCopy"
+    fi
+
     exit 0
+
 fi
 
 ###################
