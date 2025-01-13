@@ -744,7 +744,7 @@ if [ "$1" = "setup" ]; then
             exit 1
         fi
         echo "# .. copy boot"
-        rsync -avh --delete --info=progress2 ${bootPath} /mnt/disk_boot/
+        rsync -axHAX --delete --info=progress2 ${bootPath} /mnt/disk_boot/
 
         # copy the system drive
         echo "# .. copy system"
