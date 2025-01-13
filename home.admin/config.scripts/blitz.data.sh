@@ -582,7 +582,7 @@ if [ "$1" = "setup" ]; then
 
     # check if data should also be combined with storage
     setupCombinedData=$4
-    if [ "${setupCombinedData}" != "combinedData=0" ] && [ "${setupCombinedData}" != "combinedData=1" ] && [ "${setupCombinedData}" != "0" ] && [ "${setupCombinedData}" != "1" ]; then
+    if [ ${#setupCombinedData} -gt 0 ] &&  [ "${setupCombinedData}" != "combinedData=1" ] && [ "${setupCombinedData}" != "0" ] && [ "${setupCombinedData}" != "1" ]; then
         echo "error='combinedData(${setupCombinedData})'"
         echo "error='combinedData not supported'"
         exit 1
@@ -595,7 +595,7 @@ if [ "$1" = "setup" ]; then
 
     # check if boot should be from storage
     setupBootFromStorage=$5
-    if [ "${setupBootFromStorage}" != "bootFromStorage=0" ] && [ "${setupBootFromStorage}" != "bootFromStorage=1" ] && [ "${setupBootFromStorage}" != "0" ] && [ "${setupBootFromStorage}" != "1" ]; then
+    if [ ${#setupBootFromStorage} -gt 0 ] && [ "${setupBootFromStorage}" != "bootFromStorage=0" ] && [ "${setupBootFromStorage}" != "bootFromStorage=1" ] && [ "${setupBootFromStorage}" != "0" ] && [ "${setupBootFromStorage}" != "1" ]; then
         echo "error='bootFromStorage(${setupBootFromStorage})'"
         echo "error='bootFromStorage not supported'"
         exit 1
