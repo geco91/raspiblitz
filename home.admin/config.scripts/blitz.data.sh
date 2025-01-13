@@ -587,9 +587,10 @@ if [ "$1" = "setup" ]; then
         echo "error='combinedData not supported'"
         exit 1
     fi
-    setupCombinedData=0
     if [ "${setupCombinedData}" = "combinedData=1" ] || [ "${setupCombinedData}" = "1" ]; then
         setupCombinedData=1
+    else
+        setupCombinedData=0
     fi
 
     # check if boot should be from storage
@@ -599,9 +600,10 @@ if [ "$1" = "setup" ]; then
         echo "error='bootFromStorage not supported'"
         exit 1
     fi
-    setupBootFromStorage=0
     if [ "${setupBootFromStorage}" = "bootFromStorage=1" ] || [ "${setupBootFromStorage}" = "1" ]; then
         setupBootFromStorage=1
+    else
+        setupBootFromStorage=0
     fi
 
     # determine the partition base name
