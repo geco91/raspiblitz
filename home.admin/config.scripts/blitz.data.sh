@@ -621,7 +621,7 @@ if [ "$1" = "setup" ]; then
     # PARTITION & FORMAT
 
     # SYSTEM (single drive)
-    elif [ setupType="SEPERATE-SYSTEM" ]; then
+    if [ setupType="SEPERATE-SYSTEM" ]; then
         echo "# SYSTEM"
         echo "# .. partitioning"
         wipefs -a /dev/${setupDevice}
@@ -725,6 +725,10 @@ if [ "$1" = "setup" ]; then
         fi
         mkdir -p /mnt/disk_boot 2>/dev/null
         mount /dev/${setupDevicePartitionBase}1 /mnt/disk_boot
+        if ! findmnt -n -o TARGET "/mnt/disk_boot" 2>/dev/null; then
+            echo "error='boot partition not mounted'"
+            exit 1
+        fi
         echo "# .. copy boot"
         rsync -avh --delete --info=progress2 ${bootPath} /mnt/disk_boot/
 
@@ -732,6 +736,10 @@ if [ "$1" = "setup" ]; then
         echo "# .. copy system"
         mkdir -p /mnt/disk_system 2>/dev/null
         mount /dev/${setupDevicePartitionBase}2 /mnt/disk_system
+        if ! findmnt -n -o TARGET "/mnt/disk_system" 2>/dev/null; then
+            echo "error='system partition not mounted'"
+            exit 1
+        fi
         rsync -axHAX --delete --info=progress2\
             --exclude=/dev/* \
             --exclude=/proc/* \
