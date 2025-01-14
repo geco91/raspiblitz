@@ -767,7 +767,7 @@ if [ "$1" = "setup" ]; then
             --exclude=/var/cache/* \
             --exclude=/var/tmp/* \
             --exclude=/var/log/* \
-            / /mnt/disk_root/
+            / /mnt/disk_system/
             echo "# OK - System copied"
     else
         echo "# skipping: SystemCopy"
