@@ -737,6 +737,7 @@ if [ "$1" = "setup" ]; then
         if [ "${computerType}" = "raspberrypi" ]; then
             bootPath="/boot/firmware/"
         fi
+        rm -rf /mnt/disk_boot 2>/dev/null
         mkdir -p /mnt/disk_boot 2>/dev/null
         mount /dev/${setupDevicePartitionBase}1 /mnt/disk_boot
         if ! findmnt -n -o TARGET "/mnt/disk_boot" 2>/dev/null; then
@@ -748,6 +749,7 @@ if [ "$1" = "setup" ]; then
 
         # copy the system drive
         echo "# .. copy system"
+        rm -rf /mnt/disk_system 2>/dev/null
         mkdir -p /mnt/disk_system 2>/dev/null
         mount /dev/${setupDevicePartitionBase}2 /mnt/disk_system
         if ! findmnt -n -o TARGET "/mnt/disk_system" 2>/dev/null; then
