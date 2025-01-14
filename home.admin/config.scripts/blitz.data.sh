@@ -734,8 +734,10 @@ if [ "$1" = "setup" ]; then
 
         # copy the boot drive
         bootPath="/boot/"
+        bootPathEscpaed="\/boot"
         if [ "${computerType}" = "raspberrypi" ]; then
             bootPath="/boot/firmware/"
+            bootPathEscpaed="\/boot\/firmware"
         fi
         rm -rf /mnt/disk_boot 2>/dev/null
         mkdir -p /mnt/disk_boot 2>/dev/null
@@ -771,6 +773,22 @@ if [ "$1" = "setup" ]; then
             --exclude=/var/log/* \
             / /mnt/disk_system/
             echo "# OK - System copied"
+
+
+        # fstab link & command.txt
+        echo "# Perma mount boot & system drives"
+        BOOT_PARTUUID=$(sudo blkid -s PARTUUID -o value /dev/${setupDevicePartitionBase}1)
+        ROOT_PARTUUID=$(sudo blkid -s PARTUUID -o value /dev/${setupDevicePartitionBase}2)
+        echo "# - BOOT_PARTUUID(${BOOT_PARTUUID})"
+        echo "# - ROOT_PARTUUID(${ROOT_PARTUUID})"
+        if [ "${computerType}" = "raspberrypi" ]; then
+            echo "# - RaspberryPi - edit command.txt"
+            sed -i "s|PARTUUID=[^ ]*|PARTUUID=$ROOT_PARTUUID|" /mnt/disk_boot/cmdline.txt
+        fi
+        echo "# - edit fstab"
+        sed -i "/[[:space:]]${bootPathEscpaed}[[:space:]]/ s|PARTUUID=[^[:space:]]*|PARTUUID=$BOOT_PARTUUID|" /mnt/disk_system/etc/fstab
+        sed -i "/[[:space:]]\/[[:space:]]/ s|PARTUUID=[^[:space:]]*|PARTUUID=$ROOT_PARTUUID|" /mnt/disk_system/etc/fstab
+
     else
         echo "# skipping: SystemCopy"
     fi
