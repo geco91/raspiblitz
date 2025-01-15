@@ -804,9 +804,10 @@ EOF
             BOOT_PARTITION="/dev/${setupDevicePartitionBase}1"
             ROOT_PARTITION="/dev/${setupDevicePartitionBase}2"
             echo "# Mounting root and boot partitions..."
-            mkdir -p $DISK_SYSTEM
+            mkdir -p $DISK_SYSTEM 2>/dev/null
             mount $ROOT_PARTITION $DISK_SYSTEM || { echo "Failed to mount root partition"; exit 1; }
-            mkdir -p $DISK_SYSTEM/boot
+            umount /mnt/disk_boot 2>/dev/null
+            mkdir -p $DISK_SYSTEM/boot 2>/dev/null
             mount $BOOT_PARTITION $DISK_SYSTEM/boot || { echo "Failed to mount boot partition"; exit 1; }
             echo "# Bind mounting system directories..."
             mount --bind /dev $DISK_SYSTEM/dev || { echo "Failed to bind /dev"; exit 1; }
