@@ -301,7 +301,6 @@ source <(/home/admin/config.scripts/blitz.datadrive.sh status)
 echo "Waiting for HDD/SSD ..." >> $logFile
 
 until [ ${#scenario} -gt 0 ] && [[ ! "${scenario}" =~ ^error ]]; do
-do
 
   # recheck HDD/SSD
   source <(/home/admin/config.scripts/blitz.data.sh status)
