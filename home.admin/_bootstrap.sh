@@ -299,27 +299,27 @@ source <(/home/admin/config.scripts/blitz.datadrive.sh status)
 ################################
 
 echo "Waiting for HDD/SSD ..." >> $logFile
-until [ ${isMounted} -eq 1 ] || [ ${#hddCandidate} -gt 0 ]
+
+until [ ${#scenario} -gt 0 ] && [[ ! "${scenario}" =~ ^error ]]; do
 do
 
   # recheck HDD/SSD
-  source <(/home/admin/config.scripts/blitz.datadrive.sh status)
-  echo "isMounted: $isMounted" >> $logFile
-  echo "hddCandidate: $hddCandidate" >> $logFile
+  source <(/home/admin/config.scripts/blitz.data.sh status)
+  echo "blitz.data.sh status - scenario: ${scenario}" >> $logFile
 
   # in case of HDD analyse ERROR
-  if [ "${hddError}" != "" ]; then
-    echo "FAIL - error on HDD analysis: ${hddError}" >> $logFile
-    /home/admin/_cache.sh set state "errorHDD"
-    /home/admin/_cache.sh set message "${hddError}"
-  elif [ "${isMounted}" == "0" ] && [ "${hddCandidate}" == "" ]; then
+  if [ "${scenario}" = "error:no-storage" ]; then
     /home/admin/_cache.sh set state "noHDD"
     /home/admin/_cache.sh set message ">=1TB"
+  elif [ "${scenario}" =~ ^error ]; then
+    echo "FAIL - error on HDD analysis: ${scenario}" >> $logFile
+    /home/admin/_cache.sh set state "errorHDD"
+    /home/admin/_cache.sh set message "${scenario}"
   fi
 
   # wait for next check
   sleep 2
-
+  
 done
 echo "HDD/SSD connected: ${hddCandidate}" >> $logFile
 
@@ -602,6 +602,10 @@ echo "isMounted: $isMounted" >> $logFile
 
 # check if the HDD is auto-mounted ( auto-mounted = setup-done)
 echo "HDD already part of system: $isMounted" >> $logFile
+
+/home/admin/_cache.sh set state "waitsetup"
+/home/admin/_cache.sh set message "bootstrap-debug-exit"
+exit 1
 
 ############################
 ############################
