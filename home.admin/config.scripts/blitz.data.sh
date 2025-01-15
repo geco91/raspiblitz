@@ -781,8 +781,8 @@ if [ "$1" = "setup" ]; then
 
         # fstab link & command.txt
         echo "# Perma mount boot & system drives"
-        BOOT_UUID=$(sudo blkid -s PARTUUID -o value /dev/${setupDevicePartitionBase}1)
-        ROOT_UUID=$(sudo blkid -s PARTUUID -o value /dev/${setupDevicePartitionBase}2)
+        BOOT_UUID=$(sudo blkid -s UUID -o value /dev/${setupDevicePartitionBase}1)
+        ROOT_UUID=$(sudo blkid -s UUID -o value /dev/${setupDevicePartitionBase}2)
         echo "# - BOOT_UUID(${BOOT_UUID})"
         echo "# - ROOT_UUID(${ROOT_UUID})"
         if [ "${computerType}" = "raspberrypi" ]; then
