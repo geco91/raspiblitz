@@ -688,6 +688,8 @@ if [ "$1" = "setup" ]; then
 
     if [ setupType="SEPERATE-SYSTEM" ] || [ ${setupBootFromStorage} -eq 1 ]; then
         echo "# MAKE BOOTABLE"
+
+        # RASPBERRY PI
         if [ "${computerType}" = "raspberrypi" ]; then
             echo "# RaspberryPi - set LBA flag"
             parted /dev/${setupDevice} --script set 1 lba on
@@ -707,6 +709,8 @@ if [ "$1" = "setup" ]; then
             else
                 echo "# .. Bootorder already set"
             fi
+
+        # VM & PC
         else
             echo "# VM & PC - set BOOT/ESP flag"
             parted /dev/${setupDevice} --script set 1 boot on
@@ -777,17 +781,45 @@ if [ "$1" = "setup" ]; then
 
         # fstab link & command.txt
         echo "# Perma mount boot & system drives"
-        BOOT_PARTUUID=$(sudo blkid -s PARTUUID -o value /dev/${setupDevicePartitionBase}1)
-        ROOT_PARTUUID=$(sudo blkid -s PARTUUID -o value /dev/${setupDevicePartitionBase}2)
-        echo "# - BOOT_PARTUUID(${BOOT_PARTUUID})"
-        echo "# - ROOT_PARTUUID(${ROOT_PARTUUID})"
+        BOOT_UUID=$(sudo blkid -s PARTUUID -o value /dev/${setupDevicePartitionBase}1)
+        ROOT_UUID=$(sudo blkid -s PARTUUID -o value /dev/${setupDevicePartitionBase}2)
+        echo "# - BOOT_UUID(${BOOT_UUID})"
+        echo "# - ROOT_UUID(${ROOT_UUID})"
         if [ "${computerType}" = "raspberrypi" ]; then
             echo "# - RaspberryPi - edit command.txt"
-            sed -i "s|PARTUUID=[^ ]*|PARTUUID=$ROOT_PARTUUID|" /mnt/disk_boot/cmdline.txt
+            sed -i "s|UUID=[^ ]*|UUID=$ROOT_UUID|" /mnt/disk_boot/cmdline.txt
         fi
-        echo "# - edit fstab"
-        sed -i "/[[:space:]]${bootPathEscpaed}[[:space:]]/ s|PARTUUID=[^[:space:]]*|PARTUUID=$BOOT_PARTUUID|" /mnt/disk_system/etc/fstab
-        sed -i "/[[:space:]]\/[[:space:]]/ s|PARTUUID=[^[:space:]]*|PARTUUID=$ROOT_PARTUUID|" /mnt/disk_system/etc/fstab
+        cat > /mnt/disk_system/etc/fstab << EOF
+# /etc/fstab: static file system information
+#
+# <file system>                           <mount point>  <type>  <options>                              <dump>  <pass>
+UUID=${ROOT_UUID}                         /              ext4    defaults,noatime                       0       1
+UUID=${BOOT_UUID}                        /boot          vfat    defaults,noatime,umask=0077           0       2
+EOF
+
+        # install EFI GRUB for VM & PC
+        if [ "${computerType}" != "raspberrypi" ]; then
+            echo "# EFI GRUB"
+            DISK_SYSTEM="/mnt/disk_system"
+            BOOT_PARTITION="/dev/${setupDevicePartitionBase}1"
+            ROOT_PARTITION="/dev/${setupDevicePartitionBase}2"
+            echo "# Mounting root and boot partitions..."
+            mkdir -p $DISK_SYSTEM
+            mount $ROOT_PARTITION $DISK_SYSTEM || { echo "Failed to mount root partition"; exit 1; }
+            mkdir -p $DISK_SYSTEM/boot
+            mount $BOOT_PARTITION $DISK_SYSTEM/boot || { echo "Failed to mount boot partition"; exit 1; }
+            echo "# Bind mounting system directories..."
+            mount --bind /dev $DISK_SYSTEM/dev || { echo "Failed to bind /dev"; exit 1; }
+            mount --bind /sys $DISK_SYSTEM/sys || { echo "Failed to bind /sys"; exit 1; }
+            mount --bind /proc $DISK_SYSTEM/proc || { echo "Failed to bind /proc"; exit 1; }
+            cp /etc/resolv.conf $DISK_SYSTEM/etc/resolv.conf || { echo "Failed to copy resolv.conf"; exit 1; }
+            echo "# Entering chroot and setting up GRUB..."
+            chroot $DISK_SYSTEM /bin/bash <<EOF
+apt-get install -y grub-efi-amd64
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=debian --recheck
+update-grub
+EOF
+        fi
 
     else
         echo "# skipping: SystemCopy"
