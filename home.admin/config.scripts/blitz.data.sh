@@ -750,8 +750,10 @@ if [ "$1" = "setup" ]; then
             echo "error='boot partition not mounted'"
             exit 1
         fi
-        echo "# .. copy boot"
-        rsync -axHAX --delete --info=progress2 ${bootPath} /mnt/disk_boot/ || { echo "error='fail on boot copy'"; exit 1; }
+        if [ "${computerType}" = "raspberrypi" ]; then
+            echo "# .. copy boot"
+            rsync -axHAX --delete --info=progress2 ${bootPath} /mnt/disk_boot/ || { echo "error='fail on boot copy'"; exit 1; }
+        fi
 
         # copy the system drive
         echo "# .. copy system"
