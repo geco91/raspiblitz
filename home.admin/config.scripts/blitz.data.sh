@@ -653,6 +653,14 @@ if [ "$1" = "setup" ]; then
         mkfs -t ext4  /dev/${setupDevicePartitionBase}2
         wipefs -a /dev/${setupDevicePartitionBase}3 2>/dev/null
         mkfs -t ext4  /dev/${setupDevicePartitionBase}3
+        rm -rf /mnt/disk_storage 2>/dev/null
+        mkdir -p /mnt/disk_storage 2>/dev/null
+        mount /dev/${setupDevicePartitionBase}3 /mnt/disk_storage
+        mkdir -p /mnt/disk_storage/app-storage
+        if [ ${setupCombinedData} -eq 1 ]; then
+            mkdir -p /mnt/disk_storage/app-data
+        fi
+        umount /mnt/disk_storage
 
     # STOARGE (single drive OR host for seperate data & system)
     elif [ "${setupType}" = "STORAGE" ] && [ ${setupBootFromStorage} -eq 0 ]; then
@@ -665,6 +673,11 @@ if [ "$1" = "setup" ]; then
         echo "# .. formating"
         wipefs -a /dev/${setupDevicePartitionBase}1 2>/dev/null
         mkfs -t ext4  /dev/${setupDevicePartitionBase}1
+        rm -rf /mnt/disk_storage 2>/dev/null
+        mkdir -p /mnt/disk_storage 2>/dev/null
+        mount /dev/${setupDevicePartitionBase}1 /mnt/disk_storage
+        mkdir -p /mnt/disk_storage/app-storage
+        umount /mnt/disk_storage
 
     # DATA (single drive)
     elif [ "${setupType}" = "SEPERATE-DATA" ]; then
@@ -677,6 +690,11 @@ if [ "$1" = "setup" ]; then
         echo "# .. formating"
         wipefs -a /dev/${setupDevicePartitionBase}1 2>/dev/null
         mkfs -t ext4  /dev/${setupDevicePartitionBase}1
+        rm -rf /mnt/disk_data 2>/dev/null
+        mkdir -p /mnt/disk_data 2>/dev/null
+        mount /dev/${setupDevicePartitionBase}1 /mnt/disk_data
+        mkdir -p /mnt/disk_data/app-data
+        umount /mnt/disk_data
 
     else
         echo "error='setup type not supported'"
@@ -780,6 +798,11 @@ if [ "$1" = "setup" ]; then
             / /mnt/disk_system/ || { echo "error='fail on system copy'"; exit 1; }
             echo "# OK - System copied"
 
+        # needed after fixes
+        mkdir -p /mnt/disk_system/var/log/redis
+        touch /mnt/disk_system/var/log/redis/redis-server.log
+        chown redis:redis /mnt/disk_system/var/log/redis/redis-server.log
+        chmod 644 /mnt/disk_system/var/log/redis/redis-server.log
 
         # fstab link & command.txt
         echo "# Perma mount boot & system drives"
