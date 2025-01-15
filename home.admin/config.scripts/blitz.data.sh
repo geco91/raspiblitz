@@ -632,7 +632,7 @@ if [ "$1" = "setup" ]; then
         parted /dev/${setupDevice} --script mkpart primary fat32 1MiB 513MiB
         parted /dev/${setupDevice} --script mkpart primary ext4 541MB 100%
         wipefs -a /dev/${setupDevicePartitionBase}1 2>/dev/null
-        mkfs -t vfat -F 32  /dev/${setupDevicePartitionBase}1
+        mkfs.fat -F 32 /dev/${setupDevicePartitionBase}1
         wipefs -a /dev/${setupDevicePartitionBase}2 2>/dev/null
         mkfs -t ext4  /dev/${setupDevicePartitionBase}2
 
@@ -648,7 +648,7 @@ if [ "$1" = "setup" ]; then
         parted /dev/${setupDevice} --script mkpart primary ext4 65GB 100%
         echo "# .. formating"
         wipefs -a /dev/${setupDevicePartitionBase}1 2>/dev/null
-        mkfs -t vfat -F 32  /dev/${setupDevicePartitionBase}1
+        mkfs.fat -F 32 /dev/${setupDevicePartitionBase}1
         wipefs -a /dev/${setupDevicePartitionBase}2 2>/dev/null
         mkfs -t ext4  /dev/${setupDevicePartitionBase}2
         wipefs -a /dev/${setupDevicePartitionBase}3 2>/dev/null
@@ -737,8 +737,8 @@ if [ "$1" = "setup" ]; then
         echo "# SYSTEM COPY"
 
         # copy the boot drive
-        bootPath="/boot/"
-        bootPathEscpaed="\/boot"
+        bootPath="/boot/efi"
+        bootPathEscpaed="\/boot\/efi"
         if [ "${computerType}" = "raspberrypi" ]; then
             bootPath="/boot/firmware/"
             bootPathEscpaed="\/boot\/firmware"
@@ -770,7 +770,7 @@ if [ "$1" = "setup" ]; then
             --exclude=/run/* \
             --exclude=/mnt/* \
             --exclude=/media/* \
-            --exclude=/boot/* \
+            --exclude=${bootPath}/* \
             --exclude=/lost+found \
             --exclude=/var/cache/* \
             --exclude=/var/tmp/* \
@@ -781,8 +781,8 @@ if [ "$1" = "setup" ]; then
 
         # fstab link & command.txt
         echo "# Perma mount boot & system drives"
-        BOOT_UUID=$(sudo blkid -s UUID -o value /dev/${setupDevicePartitionBase}1)
-        ROOT_UUID=$(sudo blkid -s UUID -o value /dev/${setupDevicePartitionBase}2)
+        BOOT_UUID=$(blkid -s UUID -o value /dev/${setupDevicePartitionBase}1)
+        ROOT_UUID=$(blkid -s UUID -o value /dev/${setupDevicePartitionBase}2)
         echo "# - BOOT_UUID(${BOOT_UUID})"
         echo "# - ROOT_UUID(${ROOT_UUID})"
         if [ "${computerType}" = "raspberrypi" ]; then
@@ -794,7 +794,7 @@ if [ "$1" = "setup" ]; then
 #
 # <file system>                           <mount point>  <type>  <options>                              <dump>  <pass>
 UUID=${ROOT_UUID}                         /              ext4    defaults,noatime                       0       1
-UUID=${BOOT_UUID}                        /boot          vfat    defaults,noatime,umask=0077           0       2
+UUID=${BOOT_UUID}                        ${bootPath}          vfat    defaults,noatime,umask=0077           0       2
 EOF
 
         # install EFI GRUB for VM & PC
@@ -805,8 +805,8 @@ EOF
             ROOT_PARTITION="/dev/${setupDevicePartitionBase}2"
             echo "# Mounting root and boot partitions..."
             umount /mnt/disk_boot 2>/dev/null
-            mkdir -p $DISK_SYSTEM/boot 2>/dev/null
-            mount $BOOT_PARTITION $DISK_SYSTEM/boot || { echo "Failed to mount boot partition"; exit 1; }
+            mkdir -p $DISK_SYSTEM/boot/efi 2>/dev/null
+            mount $BOOT_PARTITION $DISK_SYSTEM/boot/efi || { echo "Failed to mount boot partition"; exit 1; }
             echo "# Bind mounting system directories..."
             mount --bind /dev $DISK_SYSTEM/dev || { echo "Failed to bind /dev"; exit 1; }
             mount --bind /sys $DISK_SYSTEM/sys || { echo "Failed to bind /sys"; exit 1; }
@@ -815,8 +815,8 @@ EOF
             cp /etc/resolv.conf $DISK_SYSTEM/etc/resolv.conf || { echo "Failed to copy resolv.conf"; exit 1; }
             echo "# Entering chroot and setting up GRUB..."
             chroot $DISK_SYSTEM /bin/bash <<EOF
-apt-get install -y grub-efi-amd64
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=debian --recheck
+apt-get install -y grub-efi-amd64 efibootmgr
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --recheck
 update-grub
 EOF
         fi
