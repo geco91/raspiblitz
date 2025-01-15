@@ -751,7 +751,7 @@ if [ "$1" = "setup" ]; then
             exit 1
         fi
         echo "# .. copy boot"
-        rsync -axHAX --delete --info=progress2 ${bootPath} /mnt/disk_boot/
+        rsync -axHAX --delete --info=progress2 ${bootPath} /mnt/disk_boot/ || { echo "error='fail on boot copy'"; exit 1; }
 
         # copy the system drive
         echo "# .. copy system"
@@ -775,7 +775,7 @@ if [ "$1" = "setup" ]; then
             --exclude=/var/cache/* \
             --exclude=/var/tmp/* \
             --exclude=/var/log/* \
-            / /mnt/disk_system/
+            / /mnt/disk_system/ || { echo "error='fail on system copy'"; exit 1; }
             echo "# OK - System copied"
 
 
