@@ -811,6 +811,7 @@ EOF
             mount --bind /dev $DISK_SYSTEM/dev || { echo "Failed to bind /dev"; exit 1; }
             mount --bind /sys $DISK_SYSTEM/sys || { echo "Failed to bind /sys"; exit 1; }
             mount --bind /proc $DISK_SYSTEM/proc || { echo "Failed to bind /proc"; exit 1; }
+            rm $DISK_SYSTEM/etc/resolv.conf
             cp /etc/resolv.conf $DISK_SYSTEM/etc/resolv.conf || { echo "Failed to copy resolv.conf"; exit 1; }
             echo "# Entering chroot and setting up GRUB..."
             chroot $DISK_SYSTEM /bin/bash <<EOF
