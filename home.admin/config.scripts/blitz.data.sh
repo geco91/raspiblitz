@@ -276,7 +276,7 @@ if [ "$action" = "status" ]; then
     else
         # system might run from SD card
         bootFromStorage=0
-        # check if boot partition is on SD card (mmcblk)
+        # check if boot partition is on SD card (mmcblk) - staus quo, might change thru proposed layout
         bootFromSD=$(lsblk | grep mmcblk | grep -c /boot)
     fi
     
@@ -500,12 +500,8 @@ if [ "$action" = "status" ]; then
     elif [ ${#storageMountedPath} -gt 0 ]  && [ ${#dataMountedPath} -gt 0 ] && [ ${#systemMountedPath} -gt 0 ]; then
         scenario="ready"
 
-    # ready: RaspberryPi+BootNVMe, Laptop or VM with patched thru USB drive
+    # ready: RaspberryPi, Laptop or VM with patched thru USB drive
     elif [ ${#storageMountedPath} -gt 0 ] && [ ${combinedDataStorage} -eq 1 ]; then
-        scenario="ready"
-
-    # ready: Old RaspberryPi 
-    elif [ ${#storageMountedPath} -gt 0 ] && [ ${combinedDataStorage} -eq 1 ] && [ ${bootFromSD} -eq 1 ] ; then
         scenario="ready"
 
     # recover: drives there but unmounted & blitz config exists (check raspiblitz.conf with -inspect if its update)
@@ -517,7 +513,7 @@ if [ "$action" = "status" ]; then
         scenario="recover"
 
     # setup: drives there but unmounted & no blitz config exists & booted from install media
-    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataConfigFound} -eq 0 ] && [ "${systemMountedPath}" != "/" ]; then
+    elif [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ] && [ ${dataConfigFound} -eq 0 ] && [ "${systemMountedPath}" != "/" ] && [ ${bootFromSD} -eq 0 ]; then
         scenario="setup:system" # ask user to change bootdrive before setup
 
     # setup: drives there but unmounted & no blitz config exists 
