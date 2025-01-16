@@ -808,11 +808,12 @@ if [ "$1" = "setup" ]; then
         echo "# Perma mount boot & system drives"
         BOOT_UUID=$(blkid -s UUID -o value /dev/${setupDevicePartitionBase}1)
         ROOT_UUID=$(blkid -s UUID -o value /dev/${setupDevicePartitionBase}2)
+        ROOT_PARTUUID=$(sudo blkid -s PARTUUID -o value /dev/${setupDevicePartitionBase}2)
         echo "# - BOOT_UUID(${BOOT_UUID})"
         echo "# - ROOT_UUID(${ROOT_UUID})"
         if [ "${computerType}" = "raspberrypi" ]; then
             echo "# - RaspberryPi - edit command.txt"
-            sed -i "s|UUID=[^ ]*|UUID=$ROOT_UUID|" /mnt/disk_boot/cmdline.txt
+            sed -i "s|PARTUUID=[^ ]*|PARTUUID=$ROOT_PARTUUID|" /mnt/disk_boot/cmdline.txt
         fi
         cat > /mnt/disk_system/etc/fstab << EOF
 # /etc/fstab: static file system information
