@@ -118,13 +118,7 @@ chmod 664 ${infoFile}
 cat $infoFile >> $logFile
 
 # determine correct raspberrypi boot drive path (that easy to access when sd card is insert into laptop)
-raspi_bootdir=""
-if [ -d /boot/firmware ]; then
-  raspi_bootdir="/boot/firmware"
-elif [ -d /boot ]; then
-  raspi_bootdir="/boot"
-fi
-echo "# raspi_bootdir(${raspi_bootdir})" >> $logFile
+raspi_bootdir="/boot/firmware"
 
 ######################################
 # STOP file flag - for manual provision
@@ -155,11 +149,21 @@ if [ "${vm}" == "1"  ] && [ ${flagExists} -gt 0 ]; then
   exit 0
 fi
 
+# when the provision did not ran thru without error (ask user for fresh sd card)
+provisionFlagExists=$(ls /home/admin/provision.flag | grep -c 'provision.flag')
+if [ "${provisionFlagExists}" == "1" ]; then
+  systemctl stop ${network}d 2>/dev/null
+  /home/admin/_cache.sh set state "inconsistentsystem"
+  /home/admin/_cache.sh set message "provision did not ran thru"
+  echo "FAIL: 'provision did not ran thru' - need fresh sd card!" >> ${logFile}
+  exit 1
+fi
+
 #########################
 # INIT RaspiBlitz Cache
 #########################
 
-# make sure that redis service is enabled (disabled on fresh sd card image)
+# make sure that redis service is enabled (disabled on fresh install medium)
 redisEnabled=$(systemctl is-enabled redis-server | grep -c "enabled")
 echo "## redisEnabled(${redisEnabled})" >> $logFile
 if [ ${redisEnabled} -eq 0 ]; then
@@ -170,15 +174,6 @@ if [ ${redisEnabled} -eq 0 ]; then
   systemctl start redis-server >> $logFile
   systemctl status redis-server >> $logFile
 fi
-
-echo "## INIT RaspiBlitz Cache ... wait background.scan.service to finish first scan loop" >> $logFile
-systemscan_runtime=""
-while [ "${systemscan_runtime}" == "" ]
-do
-  sleep 1
-  source <(/home/admin/_cache.sh get systemscan_runtime)
-  echo "- waiting for background.scan.service --> systemscan_runtime(${systemscan_runtime})" >> $logFile
-done
 
 # make sure latest info file is imported
 /home/admin/_cache.sh import $infoFile
@@ -194,35 +189,43 @@ source ${configFile} 2>/dev/null
 /home/admin/_cache.sh focus internet_localip 0
 
 ######################################
-# CHECK SD CARD STATE
+# SET WIFI
 
-# wifi config by file on sd card
-wifiFileExists=$(ls ${raspi_bootdir}/wifi 2>/dev/null | grep -c 'wifi')
+# File: wpa_supplicant.conf
+# legacy way to set wifi of rasperrypi
 wpaFileExists=$(ls ${raspi_bootdir}/wpa_supplicant.conf 2>/dev/null | grep -c 'wpa_supplicant.conf')
-if [ "${wifiFileExists}" == "1" ] || [ "${wpaFileExists}" == "1" ]; then
+if [ "${wpaFileExists}" == "1" ]; then  
+  echo "Getting data from file: ${raspi_bootdir}/wpa_supplicant.conf" >> ${logFile}
+  ssid=$(grep ssid "${raspi_bootdir}/wpa_supplicant.conf" | awk -F'=' '{print $2}' | tr -d '"')
+  password=$(grep psk "${raspi_bootdir}/wpa_supplicant.conf" | awk -F'=' '{print $2}' | tr -d '"')
+fi
 
-  # set info
-  echo "Setting Wifi by file on sd card ..." >> ${logFile}
+# File: wifi
+# get first line as string from wifi file (NAME OF WIFI)
+# get second line as string from wifi file (PASSWORD OF WIFI)
+wifiFileExists=$(ls ${raspi_bootdir}/wifi 2>/dev/null | grep -c 'wifi')
+if [ "${wifiFileExists}" == "1" ]; then
+  echo "Getting data from file: ${raspi_bootdir}/wifi" >> ${logFile}
+  ssid=$(sed -n '1p' ${raspi_bootdir}/wifi | tr -d '[:space:]')
+  password=$(sed -n '2p' ${raspi_bootdir}/wifi | tr -d '[:space:]')
+fi
+
+# Recover: wifi from storage drive inspection
+source <(/home/admin/config.scripts/blitz.data.sh status -inspect)
+if [ "${scenario}" != "ready" ] && [ "${dataInspectSuccess}" == "1" ]; then
+  for file in /var/cache/raspiblitz/hdd-inspect/wifi/*; do
+    if [[ -f "$file" ]]; then
+      ssid=$(grep -m 1 '^ssid=' "$file" | cut -d'=' -f2)
+      password=$(grep -m 1 '^psk=' "$file" | cut -d'=' -f2)
+    fi
+  done
+fi
+
+# set wifi if data is available
+if [ "${ssid}" != "" ] && [ "${password}" != "" ]; then
+  echo "Setting Wifi ..." >> ${logFile}
+  echo "ssid(${ssid}) password(${password})" >> ${logFile}
   /home/admin/_cache.sh set message "setting wifi"
-
-  # File: wifi
-  # get first line as string from wifi file (NAME OF WIFI)
-  # get second line as string from wifi file (PASSWORD OF WIFI)
-  if [ "${wifiFileExists}" == "1" ]; then
-    echo "Getting data from file: ${raspi_bootdir}/wifi" >> ${logFile}
-    ssid=$(sed -n '1p' ${raspi_bootdir}/wifi | tr -d '[:space:]')
-    password=$(sed -n '2p' ${raspi_bootdir}/wifi | tr -d '[:space:]')
-  fi
-
-  # File: wpa_supplicant.conf (legacy way to set wifi)
-  # see: https://github.com/raspibolt/raspibolt/blob/a21788c0518618d17093e3f447f68a53e4efa6e7/raspibolt/raspibolt_20_pi.md#prepare-wifi
-  if [ "${wpaFileExists}" == "1" ]; then  
-    echo "Getting data from file: ${raspi_bootdir}/wpa_supplicant.conf" >> ${logFile}
-    ssid=$(grep ssid "${raspi_bootdir}/wpa_supplicant.conf" | awk -F'=' '{print $2}' | tr -d '"')
-    password=$(grep psk "${raspi_bootdir}/wpa_supplicant.conf" | awk -F'=' '{print $2}' | tr -d '"')
-  fi
-
-  # set wifi
   err=""
   echo "Setting Wifi SSID(${ssid}) Password(${password})" >> ${logFile}
   source <(/home/admin/config.scripts/internet.wifi.sh on ${ssid} ${password})
@@ -236,24 +239,167 @@ if [ "${wifiFileExists}" == "1" ] || [ "${wpaFileExists}" == "1" ]; then
     shutdown now
     exit 1
   fi
-
-  # remove file
-  echo "Setting Wifi worked - removing file" >> ${logFile}
   rm ${raspi_bootdir}/wifi 2>/dev/null
   rm ${raspi_bootdir}/wpa_supplicant.conf 2>/dev/null
-else
-  echo "No Wifi config by file on sd card." >> ${logFile}
 fi
 
-# when the provision did not ran thru without error (ask user for fresh sd card)
-provisionFlagExists=$(ls /home/admin/provision.flag | grep -c 'provision.flag')
-if [ "${provisionFlagExists}" == "1" ]; then
-  systemctl stop ${network}d 2>/dev/null
-  /home/admin/_cache.sh set state "inconsistentsystem"
-  /home/admin/_cache.sh set message "provision did not ran thru"
-  echo "FAIL: 'provision did not ran thru' - need fresh sd card!" >> ${logFile}
-  exit 1
-fi
+######################################
+# SYSTEM COPY to SSD/NVME
+
+source <(/home/admin/config.scripts/blitz.data.sh status -inspect)
+
+# on SETUP: ask user for format and copy of system
+if [ "${scenario}" == "setup:system" ]; then
+
+  /home/admin/_cache.sh set state "setup:system-wait"
+  /home/admin/_cache.sh set message "user action needed"
+
+  # put info into cache for ssh-dialog or web-dialog to pick up on
+  /home/admin/_cache.sh set "system_setup_bootFromStorage" "${bootFromStorage}"
+  /home/admin/_cache.sh set "system_setup_combinedDataStorage" "${combinedDataStorage}"
+  /home/admin/_cache.sh set "system_setup_storageDevice" "${storageDevice}"
+  /home/admin/_cache.sh set "system_setup_storageDeviceName" "${storageDeviceName}"
+  /home/admin/_cache.sh set "system_setup_storageSizeGB" "${storageDeviceName}"
+  /home/admin/_cache.sh set "system_setup_storageWarning" "${storageWarning}"
+  /home/admin/_cache.sh set "system_setup_systemDevice" "${storageDevice}"
+  /home/admin/_cache.sh set "system_setup_systemDeviceName" "${storageDeviceName}"
+  /home/admin/_cache.sh set "system_setup_systemSizeGB" "${storageDeviceName}"
+  /home/admin/_cache.sh set "system_setup_systemWarning" "${storageWarning}"
+  /home/admin/_cache.sh set "system_setup_dataDevice" "${storageDevice}"
+  /home/admin/_cache.sh set "system_setup_dataDeviceName" "${storageDeviceName}"
+  /home/admin/_cache.sh set "system_setup_dataSizeGB" "${storageDeviceName}"
+  /home/admin/_cache.sh set "system_setup_dataWarning" "${storageWarning}"
+
+  if [ -f "/home/admin/systemcopy.flag" ]; then
+    /home/admin/_cache.sh set "system_setup_secondtry" "1"
+  else
+    /home/admin/_cache.sh set "system_setup_secondtry" "0"
+  fi
+
+  echo "## WAIT LOOP: USER SETUP SYSTEM" >> ${logFile}
+  until [ "${state}" == "setup:system-result" ]
+  do
+    # check for updated state value from SSH-UI or WEB-UI for loop
+    sleep 2
+    source <(/home/admin/_cache.sh get state)
+  done
+
+  # get user result from cache
+  source <(/home/admin/_cache.sh get "system_setup_result")
+  echo "system_setup_result(${system_setup_result})" >> ${logFile}
+  elif [ "${system_setup_result}" == "ignore" ]; then
+    echo "User wants NO system copy .. skipping." >> ${logFile}
+  elif [ "${system_setup_result}" == "setup" ]; then
+
+    ####################
+    # RUN SYSTEM COPY: SETUP
+
+    echo "User wants to format system" >> ${logFile}
+    /home/admin/_cache.sh set state "setup:system-run"
+
+    # STORAGE
+    if [ ${#storageDevice} -gt 0 ] && [ "${storageMountedPath}" == "0" ]; then
+      /home/admin/_cache.sh set message "Init STORAGE Drive"
+      error=""
+      source <(/home/admin/config.scripts/blitz.data.sh setup STORAGE "${storageDevice}" "${combinedDataStorage}" "${bootFromStorage}")
+      if [ "${error}" != "" ]; then
+        echo "FAIL: 'setup STORAGE' failed error(${error})" >> ${logFile}
+        /home/admin/_cache.sh set state "error"
+        /home/admin/_cache.sh set message "${error}"
+        exit 1
+      fi
+    fi
+
+    # SYSTEM
+    if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" == "0" ] && [ ${#systemWarning} -eq 0 ]; then
+      /home/admin/_cache.sh set message "Init SYSTEM Drive"
+      error=""
+      source <(/home/admin/config.scripts/blitz.data.sh setup SYSTEM "${systemDevice}")
+      if [ "${error}" != "" ]; then
+        echo "FAIL: 'setup SYSTEM' failed error(${error})" >> ${logFile}
+        /home/admin/_cache.sh set state "error"
+        /home/admin/_cache.sh set message "${error}"
+        exit 1
+      fi
+    fi
+
+    # DATA
+    if [ ${#dataDevice} -gt 0 ] && [ ${#dataWarning} -eq 0 ]; then
+      /home/admin/_cache.sh set message "Init DATA Drive"
+      error=""
+      source <(/home/admin/config.scripts/blitz.data.sh setup DATA "${systemDevice}")
+      if [ "${error}" != "" ]; then
+        echo "FAIL: 'setup DATA' failed error(${error})" >> ${logFile}
+        /home/admin/_cache.sh set state "error"
+        /home/admin/_cache.sh set message "${error}"
+        exit 1
+      fi
+    fi
+
+    # put flag file to signal change if boot medium was tried before
+    touch /home/admin/systemcopy.flag
+
+    # TODO: DISABLE INSTALL MEDIUM
+
+    /home/admin/_cache.sh set state "reboot"
+    /home/admin/_cache.sh set message "restarting system"
+    shutdown -r now
+    exit 0
+
+  else
+    echo "Give user option to shutdown and change drives." >> ${logFile}
+    /home/admin/_cache.sh set state "shutdown"
+    /home/admin/_cache.sh set message ""
+    shutdown now
+    exit 1
+  fi
+fi 
+
+# on RECOVER/UPDATE: auto copy system
+if [ "${scenario}" == "recover:system" ]; then
+
+  /home/admin/_cache.sh set state "recover:system"
+  /home/admin/_cache.sh set message ""
+
+
+  # STORAGE
+  if [ ${#storageDevice} -gt 0 ] && [ "${storageMountedPath}" == "0" ]; then
+    /home/admin/_cache.sh set message "Init STORAGE Drive"
+    error=""
+
+    if [ "${error}" != "" ]; then
+      echo "FAIL: 'setup STORAGE' failed error(${error})" >> ${logFile}
+      /home/admin/_cache.sh set state "error"
+      /home/admin/_cache.sh set message "${error}"
+      exit 1
+    fi
+  fi
+
+  # SYSTEM
+  error=""
+  if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" == "0" ]; then
+    /home/admin/_cache.sh set message "Udpating SYSTEM"
+    source <(/home/admin/config.scripts/blitz.data.sh recover SYSTEM "${systemDevice}")
+  else
+    /home/admin/_cache.sh set message "Udpating STORAGE"
+    source <(/home/admin/config.scripts/blitz.data.sh recover STORAGE "${storageDevice}" "${combinedDataStorage}" "${bootFromStorage}")
+  fi
+  if [ "${error}" != "" ]; then
+    echo "FAIL: 'setup SYSTEM' failed error(${error})" >> ${logFile}
+    /home/admin/_cache.sh set state "error"
+    /home/admin/_cache.sh set message "${error}"
+    exit 1
+  fi
+
+  # TODO: DISABLE INSTALL MEDIUM
+
+  # reboot from updated system
+  /home/admin/_cache.sh set state "reboot"
+  /home/admin/_cache.sh set message "restarting system"
+  shutdown -r now
+  exit 0
+
+fi 
 
 ################################
 # BOOT LOGO
@@ -267,6 +413,17 @@ randnum=$(shuf -i 0-7 -n 1)
 /home/admin/config.scripts/blitz.display.sh image /home/admin/raspiblitz/pictures/startlogo${randnum}.png
 sleep 5
 /home/admin/config.scripts/blitz.display.sh hide
+
+######################################
+# WAIT FOR FIRST FULL BACKGROUND SCAN
+echo "## RaspiBlitz Cache ... wait background.scan.service to finish first scan loop" >> $logFile
+systemscan_runtime=""
+while [ "${systemscan_runtime}" == "" ]
+do
+  sleep 1
+  source <(/home/admin/_cache.sh get systemscan_runtime)
+  echo "- waiting for background.scan.service --> systemscan_runtime(${systemscan_runtime})" >> $logFile
+done
 
 ################################
 # CLEANING BOOT SYSTEM
@@ -291,15 +448,14 @@ else
 fi
 echo ""
 
-# get the state of data drive
-source <(/home/admin/config.scripts/blitz.datadrive.sh status)
-
 ################################
 # WAIT LOOP: HDD CONNECTED
+# (old RaspiBlitz Setup)
 ################################
 
 echo "Waiting for HDD/SSD ..." >> $logFile
 
+scenario="" # run loop at least on time
 until [ ${#scenario} -gt 0 ] && [[ ! "${scenario}" =~ ^error ]]; do
 
   # recheck HDD/SSD
