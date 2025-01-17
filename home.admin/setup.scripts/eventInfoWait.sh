@@ -347,6 +347,13 @@ Capacity of 32GB recommended
 Cut power & create fresh sd card
 " 7 40
 
+elif [ "${eventID}" == "systemcopy" ]; then
+
+    dialog --backtitle "${backtitle}" --cr-wrap --infobox "
+COPYING SYSTEM TO SSD/NVME
+This can take a while ...
+" 6 30
+
 ################################################
 # 2) GENERIC EVENT
 # may get better defined in the future
