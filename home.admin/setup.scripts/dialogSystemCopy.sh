@@ -23,8 +23,8 @@ Do you want to copy RaspiBlitz system to SSD/NVME and boot from it?" 16 65
 
 if [ "$?" == "0" ]; then
     echo "# 0 --> Yes"
-    exit 1
+    exit 0
 else
     echo "# 1 --> No"
-    exit 0
+    exit 1
 fi
