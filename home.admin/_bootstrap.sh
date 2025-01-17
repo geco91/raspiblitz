@@ -423,6 +423,9 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
   # set flag for reboot (only needed on raspberry pi)
   systemInitReboot=0
 
+  /home/admin/_cache.sh set message "PRE-FSEXPAND"
+  sleep 20
+
   ################################
   # FS EXPAND
   # extend sd card to maximum capacity
@@ -448,6 +451,9 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     echo "No FS EXPAND needed. needsExpansion(${needsExpansion}) fsexpanded(${fsexpanded})" >> $logFile
   fi
 
+  /home/admin/_cache.sh set message "PRE-FILES"
+  sleep 10
+
   ################################
   # FORCED SWITCH TO HDMI
   # if a file called 'hdmi' gets
@@ -466,6 +472,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
   else
     echo "No HDMI switch found. " >> $logFile
   fi
+
 
   ################################
   # SSH SERVER CERTS RESET
@@ -486,6 +493,9 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
   else
     echo "No SSHRESET switch found. " >> $logFile
   fi
+
+  /home/admin/_cache.sh set message "PRE-DISPLAY"
+  sleep 10
 
   ##################################
   # DISPLAY RESTORE (if needed)
@@ -517,6 +527,9 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     echo "No DISPLAY RESTORE because no /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" >> $logFile
   fi
 
+  /home/admin/_cache.sh set message "PRE-USAP"
+  sleep 10
+
   ################################
   # UASP FIX
 
@@ -534,6 +547,9 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
   else
     echo "No UASP FIX needed" >> $logFile
   fi
+
+  /home/admin/_cache.sh set message "PRE-FIRMWARE"
+  sleep 10
 
   ################################
   # RaspberryPi 5 - Firmware Update (needs internet)
@@ -556,6 +572,9 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
   else
     echo "RaspberryPi Firmware not in th need of update." >> $logFile
   fi
+
+  /home/admin/_cache.sh set message "PRE-REBOOT"
+  sleep 10
 
   ######################################
   # CHECK IF REBOOT IS NEEDED
