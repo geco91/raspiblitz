@@ -671,7 +671,6 @@ if [ "${scenario}" != "ready" ] ; then
 
   else
     echo "INFO: 'raspiblitz.setup' does not exist - wait for user config" >> ${logFile}
-    /home/admin/_cache.sh set state "waitprovision"
     /home/admin/_cache.sh set message "${infoMessage}"
     /home/admin/_cache.sh set setupPhase "${setupPhase}"
   fi
@@ -682,6 +681,7 @@ if [ "${scenario}" != "ready" ] ; then
   #############################################
 
   echo "## WAIT LOOP: USER SETUP/UPDATE/MIGRATION" >> ${logFile}
+  echo "state(${state})" >> ${logFile}
   until [ "${state}" = "waitprovision" ]
   do
 
@@ -692,6 +692,7 @@ if [ "${scenario}" != "ready" ] ; then
     source <(/home/admin/_cache.sh get state)
 
   done
+  echo "## WAIT LOOP: DONE" >> ${logFile}
 
   # get the results from the SSH-UI or WEB-UI
   echo "LOADING 'raspiblitz.setup' ..." >> ${logFile}
