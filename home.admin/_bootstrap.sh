@@ -423,7 +423,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
   # set flag for reboot (only needed on raspberry pi)
   systemInitReboot=0
 
-  /home/admin/_cache.sh set message "PRE-FSEXPAND"
+  /home/admin/_cache.sh set status "PRE-FSEXPAND"
   sleep 20
 
   ################################
@@ -451,7 +451,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     echo "No FS EXPAND needed. needsExpansion(${needsExpansion}) fsexpanded(${fsexpanded})" >> $logFile
   fi
 
-  /home/admin/_cache.sh set message "PRE-FILES"
+  /home/admin/_cache.sh set status "PRE-FILES"
   sleep 10
 
   ################################
@@ -494,7 +494,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     echo "No SSHRESET switch found. " >> $logFile
   fi
 
-  /home/admin/_cache.sh set message "PRE-DISPLAY"
+  /home/admin/_cache.sh set status "PRE-DISPLAY"
   sleep 10
 
   ##################################
@@ -527,7 +527,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     echo "No DISPLAY RESTORE because no /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" >> $logFile
   fi
 
-  /home/admin/_cache.sh set message "PRE-USAP"
+  /home/admin/_cache.sh set status "PRE-USAP"
   sleep 10
 
   ################################
@@ -548,7 +548,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     echo "No UASP FIX needed" >> $logFile
   fi
 
-  /home/admin/_cache.sh set message "PRE-FIRMWARE"
+  /home/admin/_cache.sh set status "PRE-FIRMWARE"
   sleep 10
 
   ################################
@@ -573,7 +573,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     echo "RaspberryPi Firmware not in th need of update." >> $logFile
   fi
 
-  /home/admin/_cache.sh set message "PRE-REBOOT"
+  /home/admin/_cache.sh set status "PRE-REBOOT"
   sleep 10
 
   ######################################
