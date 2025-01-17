@@ -333,13 +333,13 @@ for dev in $devices; do
 done
 
 #####################################
-# INIT OF FRESH SYSTEM (ALL SYSTEMS)
+# PRE-SETUP INIT (ALL SYSTEMS)
 #####################################
 
 if [ "${scenario}" != "ready" ] ; then
 
   # write info for LCD
-   echo "## INIT OF FRESH SYSTEM (ALL SYSTEMS)" >> $logFile
+   echo "## PRE-SETUP INIT (ALL SYSTEMS)" >> $logFile
   /home/admin/_cache.sh set state "system-init"
   /home/admin/_cache.sh set message "please wait"
 
@@ -413,12 +413,12 @@ do
 done
 
 #####################################
-# INIT OF FRESH SYSTEM (RASPBERRY PI)
+# PRE-SETUP INIT(RASPBERRY PI)
 #####################################
 
 if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
 
-  echo "## INIT OF FRESH SYSTEM (RASPBERRY PI)" >> $logFile
+  echo "## PRE-SETUP INIT(RASPBERRY PI)" >> $logFile
 
   # set flag for reboot (only needed on raspberry pi)
   systemInitReboot=0
@@ -573,15 +573,18 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
 
 fi
 
-#####################################
-# SYSTEM COPY OF FRESH SYSTEM
-#####################################
+############################
+############################
+# WHEN SETUP IS NEEDED  
+############################
 
-# on SETUP: ask user for format and copy of system
-if [ "${scenario}" = "setup:system" ]; then
+if [ "${scenario}" != "ready" ] ; then
 
-  /home/admin/_cache.sh set state "setup:system-wait"
-  /home/admin/_cache.sh set message "user action needed"
+  echo "## WHEN SETUP IS NEEDED " >> $logFile
+  echo "/home/admin/config.scripts/blitz.data.sh status -inspect"
+  /home/admin/config.scripts/blitz.data.sh status -inspect >> $logFile
+
+  # TODO: Add info if RaspberryPi, VM or LAPTOP
 
   # put info into cache for ssh-dialog or web-dialog to pick up on
   /home/admin/_cache.sh set "system_setup_bootFromStorage" "${bootFromStorage}"
@@ -590,6 +593,8 @@ if [ "${scenario}" = "setup:system" ]; then
   /home/admin/_cache.sh set "system_setup_storageDeviceName" "${storageDeviceName}"
   /home/admin/_cache.sh set "system_setup_storageSizeGB" "${storageDeviceName}"
   /home/admin/_cache.sh set "system_setup_storageWarning" "${storageWarning}"
+  /home/admin/_cache.sh set "system_setup_storageBlockchainGB" "${storageBlockchainGB}"
+  /home/admin/_cache.sh set "system_setup_storageMigration" "${storageMigration}"
   /home/admin/_cache.sh set "system_setup_systemDevice" "${storageDevice}"
   /home/admin/_cache.sh set "system_setup_systemDeviceName" "${storageDeviceName}"
   /home/admin/_cache.sh set "system_setup_systemSizeGB" "${storageDeviceName}"
@@ -599,32 +604,95 @@ if [ "${scenario}" = "setup:system" ]; then
   /home/admin/_cache.sh set "system_setup_dataSizeGB" "${storageDeviceName}"
   /home/admin/_cache.sh set "system_setup_dataWarning" "${storageWarning}"
 
+  # add info if a flag shows that install medium was tried before
   if [ -f "/home/admin/systemcopy.flag" ]; then
     /home/admin/_cache.sh set "system_setup_secondtry" "1"
   else
     /home/admin/_cache.sh set "system_setup_secondtry" "0"
   fi
 
-  echo "## WAIT LOOP: USER SETUP SYSTEM" >> ${logFile}
-  until [ "${state}" = "setup:system-result" ]
+  # TODO: GET INFO FROM OTHE IMPLEMENTATIONS & COMPARE AGIANST LOCAL - not just LND
+  # when migration check if for outdated btc, lnd, cln
+  if [ "${scenario}" = "migration" ]; then 
+    migrationMode="normal"
+    if [ "${hddVersionLND}" != "" ]; then
+      source <(/home/admin/config.scripts/lnd.install.sh info "${hddVersionLND}")
+      if [ "${compatible}" != "1" ]; then
+        migrationMode="outdatedLightning"
+      fi 
+    fi
+    /home/admin/_cache.sh set migrationMode "${migrationMode}"
+  fi
+
+  # TODO: REPLACE THIS OLD VALUES IN SSH & WEBUI
+  /home/admin/_cache.sh set hddCandidate "${hddCandidate}"
+  /home/admin/_cache.sh set hddGigaBytes "${hddGigaBytes}"
+  /home/admin/_cache.sh set hddBlocksBitcoin "${hddBlocksBitcoin}"
+  /home/admin/_cache.sh set hddGotMigrationData "${hddGotMigrationData}"
+  /home/admin/_cache.sh set hddVersionLND "${hddVersionLND}"
+
+  # map scenario to setupPhase
+  /home/admin/_cache.sh set "system_setup_askSystemCopy" "0"
+
+  if [ "${scenario}" = "setup:system" ]; then
+    setupPhase="setup"
+    infoMessage="Please start Setup"
+    /home/admin/_cache.sh set "system_setup_askSystemCopy" "1"
+
+  if [ "${scenario}" = "setup:system" ]; then
+    setupPhase="setup"
+    infoMessage="Please start Setup"
+
+  elif [ "${scenario}" = "recover" ] || [ "${scenario}" = "recover:system" ]; then
+    setupPhase="recovery"
+    infoMessage="Please start Recovery"
+
+    # TODO: DETERMINE IF RECOVER OR UPDATE
+    #setupPhase="update"
+
+  elif [ "${scenario}" = "migration" ]; then
+    setupPhase="migration"
+    infoMessage="Please start Migration"
+
+  else
+    setupPhase="error"
+    infoMessage="Unkonwn Setup Phase"
+  fi
+
+  # signal "WAIT LOOP: SETUP" to LCD, SSH & WEBAPI
+  /home/admin/_cache.sh set state "waitsetup"
+  /home/admin/_cache.sh set message "${infoMessage}"
+  /home/admin/_cache.sh set setupPhase "${setupPhase}"
+
+  #############################################
+  # WAIT LOOP: USER SETUP/UPDATE/MIGRATION
+  # until SSH or WEBUI setup data is available
+  #############################################
+
+  echo "## WAIT LOOP: USER SETUP/UPDATE/MIGRATION" >> ${logFile}
+  until [ "${state}" = "waitprovision" ]
   do
+
+    # give the loop a little bed time
+    sleep 4
+
     # check for updated state value from SSH-UI or WEB-UI for loop
-    sleep 2
     source <(/home/admin/_cache.sh get state)
+
   done
 
-  # get user result from cache
-  source <(/home/admin/_cache.sh get "system_setup_result")
-  echo "system_setup_result(${system_setup_result})" >> ${logFile}
-  if [ "${system_setup_result}" = "ignore" ]; then
-    echo "User wants NO system copy .. skipping." >> ${logFile}
-  elif [ "${system_setup_result}" = "setup" ]; then
+  # get the results from the SSH-UI or WEB-UI
+  source ${setupFile}
 
-    ####################
-    # RUN SYSTEM COPY: SETUP
+  # when user agreed to system copy to bootable drive (flag from setupFile)
+  if [ "${copySystem}" = "1" ]; then
 
-    echo "User wants to format system" >> ${logFile}
-    /home/admin/_cache.sh set state "setup:system-run"
+    #####################################
+    # SYSTEM COPY OF FRESH SYSTEM
+
+    echo "SYSTEM COPY OF FRESH SYSTEM" >> ${logFile}
+    /home/admin/_cache.sh set state "systemcopy"
+    /home/admin/_cache.sh set message "copying system"
 
     # STORAGE
     if [ ${#storageDevice} -gt 0 ] && [ "${storageMountedPath}" = "0" ]; then
@@ -665,23 +733,32 @@ if [ "${scenario}" = "setup:system" ]; then
       fi
     fi
 
-    # put flag file to signal change if boot medium was tried before
+    # put flag file into old system 
     touch /home/admin/systemcopy.flag
 
-    # TODO: DISABLE INSTALL MEDIUM
+    # put setupFile to new system (so after reboot it can auto-provision)
+    source <(/home/admin/config.scripts/blitz.data.sh status)
+    mount /dev/${systemPartition} /mnt/disk_system
+    echo "copy setupFile(${setupFile}) to /mnt/disk_system/home/admin/raspiblitz.setup" >> ${logFile}
+    cp ${setupFile} /mnt/disk_system/home/admin/raspiblitz.setup
 
+    # TODO: disable old system boot
+
+    echo "DEBUG EXIT" >> ${logFile}
+    exit 0
+
+    # reboot so that new system can start
     /home/admin/_cache.sh set state "reboot"
     /home/admin/_cache.sh set message "restarting system"
     shutdown -r now
     exit 0
 
   else
-    echo "Give user option to shutdown and change drives." >> ${logFile}
-    /home/admin/_cache.sh set state "shutdown"
-    /home/admin/_cache.sh set message ""
-    shutdown now
-    exit 1
+    echo "Skipping System Copy" >> ${logFile}
   fi
+
+
+
 fi 
 
 # on RECOVER/UPDATE: auto copy system
@@ -735,113 +812,6 @@ fi
 /home/admin/_cache.sh set message "bootstrap-debug-exit"
 exit 1
 
-############################
-############################
-# WHEN SETUP IS NEEDED  
-############################
-
-if [ ${isMounted} -eq 0 ]; then
-
-  # temp mount the HDD
-  echo "Temp mounting (1) data drive" >> $logFile
-  source <(/home/admin/config.scripts/blitz.datadrive.sh tempmount)
-  echo "Temp mounting (1) result: ${isMounted}" >> $logFile
-
-  # write data needed for setup process into raspiblitz.info
-  /home/admin/_cache.sh set hddCandidate "${hddCandidate}"
-  /home/admin/_cache.sh set hddGigaBytes "${hddGigaBytes}"
-  /home/admin/_cache.sh set hddBlocksBitcoin "${hddBlocksBitcoin}"
-  /home/admin/_cache.sh set hddBlocksLitecoin "${hddBlocksLitecoin}"
-  /home/admin/_cache.sh set hddGotMigrationData "${hddGotMigrationData}"
-  /home/admin/_cache.sh set hddVersionLND "${hddVersionLND}"
-  echo ""
-  echo "HDD is there but not AutoMounted yet - Waiting for user Setup/Update" >> $logFile
-
-  # add some debug info to logfile
-  echo "# df " >> ${logFile}
-  df >> ${logFile}
-  echo "# lsblk -o NAME,FSTYPE,LABEL " >> ${logFile}
-  lsblk -o NAME,FSTYPE,LABEL >> ${logFile}
-  echo "# /home/admin/config.scripts/blitz.datadrive.sh status"
-  /home/admin/config.scripts/blitz.datadrive.sh status >> ${logFile}
-
-  # determine correct setup phase
-  infoMessage="Please start Setup"
-  setupPhase="setup"
-  
-  if [ "${hddGotMigrationData}" != "" ]; then
-    infoMessage="Please start Migration"
-    setupPhase="migration"
-    # check if lightning is outdated
-    migrationMode="normal"
-    if [ "${hddVersionLND}" != "" ]; then
-      # get local lnd version & check compatibility
-      source <(/home/admin/config.scripts/lnd.install.sh info "${hddVersionLND}")
-      if [ "${compatible}" != "1" ]; then
-        migrationMode="outdatedLightning"
-      fi 
-    fi
-    /home/admin/_cache.sh set migrationMode "${migrationMode}"
-
-  elif [ "${hddRaspiData}" = "1" ]; then
-
-    # determine if this is a recovery or an update
-    # TODO: improve version/update detection later
-    isRecovery=$(echo "${hddRaspiVersion}" | grep -c "${codeVersion}")
-    if [ "${isRecovery}" = "1" ]; then
-      infoMessage="Please start Recovery"
-      setupPhase="recovery"
-    else
-      infoMessage="Please start Update"
-      setupPhase="update"
-    fi
-
-  fi
-
-  # signal "WAIT LOOP: SETUP" to LCD, SSH & WEBAPI
-  echo "Displaying Info Message: ${infoMessage}" >> $logFile
-  /home/admin/_cache.sh set state "waitsetup"
-  /home/admin/_cache.sh set message "${infoMessage}"
-  /home/admin/_cache.sh set setupPhase "${setupPhase}"
-
-  #############################################
-  # WAIT LOOP: USER SETUP/UPDATE/MIGRATION
-  # until SSH or WEBUI setup data is available
-  #############################################
-
-  echo "## WAIT LOOP: USER SETUP/UPDATE/MIGRATION" >> ${logFile}
-  until [ "${state}" = "waitprovision" ]
-  do
-
-    # get fresh info about data drive (in case the hdd gets disconnected)
-    source <(/home/admin/config.scripts/blitz.datadrive.sh status)
-    if [ "${hddCandidate}" = "" ]; then
-      /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "lost-hdd" "Lost HDD connection .. triggering reboot." "happened during WAIT LOOP: USER SETUP/UPDATE/MIGRATION" ${logFile}
-      sleep 8
-      shutdown -r now
-      sleep 100
-      exit 0
-    fi
-
-    # detect if network get deconnected again (call directly instead of cache)
-    # --> "removing network cable" can be used as signal to shutdown clean on test startup
-    source <(/home/admin/config.scripts/internet.sh status local)
-    if [ "${localip}" = "" ]; then
-      sed -i "s/^state=.*/state=errorNetwork/g" ${infoFile}
-      sleep 8
-      shutdown now
-      sleep 100
-      exit 0
-    fi
-
-    # give the loop a little bed time
-    sleep 4
-
-    # check for updated state value from SSH-UI or WEB-UI for loop
-    source <(/home/admin/_cache.sh get state)
-
-  done
-
   #############################################
   # PROVISION PROCESS
   #############################################
@@ -855,8 +825,7 @@ if [ ${isMounted} -eq 0 ]; then
 
   # get fresh data from setup file & data drive
   source <(/home/admin/config.scripts/blitz.datadrive.sh status)
-  source ${setupFile}
-
+ 
   # special setup tasks (triggered by api/webui thru setupfile)
 
   # FORMAT DATA DRIVE

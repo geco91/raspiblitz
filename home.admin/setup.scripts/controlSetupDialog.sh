@@ -96,14 +96,14 @@ source /home/admin/raspiblitz.info
 ############################################
 # DEFAULT: Basic Setup menu
 # user might default to from quick options
-if [ "${setupPhase}" == "setup" ]; then
+if [ "${setupPhase}" = "setup" ]; then
 
   echo "# Starting basic setup dialog ..."
   /home/admin/setup.scripts/dialogBasicSetup.sh ${orgSetupPhase}
   menuresult=$?
 
   # menu RECOVER menu option
-  if [ "${menuresult}" == "4" ]; then
+  if [ "${menuresult}" = "4" ]; then
     setupPhase="${orgSetupPhase}"
     /home/admin/_cache.sh set setupPhase "${setupPhase}"
     # proceed with provision (mark Password A to be set)
