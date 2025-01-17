@@ -142,7 +142,7 @@ if [ "${setupPhase}" = "setup" ]; then
       # ask user about system copy
       /home/admin/setup.scripts/dialogSystemCopy.sh
       userChoice=$?
-      if [ "${userChoice}" == "1" ]; then
+      if [ "${userChoice}" == "0" ]; then
         echo "systemCopy=1" >> $SETUPFILE
       else
         echo "systemCopy=0" >> $SETUPFILE
@@ -151,11 +151,12 @@ if [ "${setupPhase}" = "setup" ]; then
 
     source <(/home/admin/_cache.sh get system_setup_storageMigration system_setup_storageBlockchainGB)
 
-    # check if there is a blockchain to use (so HDD is already formatted)
-    # thats also true if the node is coming from another nodeOS
+    # only offer 'keep blockchain' option on systems that dont boot from storage 
     existingBlockchain=""
-    if [ "${system_setup_storageBlockchainGB}" == "1" ] || [ "${system_setup_storageMigration}" != "" ]; then
-      existingBlockchain="BITCOIN"
+    if [ "${system_setup_bootFromStorage}" == "0" ]; then
+      if [ "${system_setup_storageBlockchainGB}" != "" ] || [ "${system_setup_storageBlockchainGB}" != "0" ]; then
+        existingBlockchain="BITCOIN"
+      fi
     fi
 
     # ask user about possible existing blockchain and formatting HDD

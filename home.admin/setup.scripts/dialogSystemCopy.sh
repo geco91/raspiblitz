@@ -15,7 +15,7 @@ if [ "${system_setup_dataDevice}" != "" ]; then
     driveInfo+="DATA:    ${system_setup_dataDevice} ${system_setup_systemSizeGB}GB\n"
 fi
 
-whiptail --title " BOOT FROM SSD/NVME " --yes-button "YES - BOOT SSD/NVME" --no-button "NO" --yesno "Your system allows to BOOT FROM SSD/NVME - which allows for better stability & performance and is recommended.
+whiptail --title " BOOT FROM SSD/NVME " --yes-button "YES - BOOT SSD/NVME" --no-button "NO" --yesno "Your system allows to BOOT FROM SSD/NVME - which provides better stability & performance and is recommended.
 
 ${driveInfo}
 

@@ -42,9 +42,9 @@ Are you sure to DELETE ALL OTHER DATA on the HDD/SSD?
 else
 
     # normal formatting data drive security question
-    whiptail --title " FORMATTING DATA DRVE " --yes-button "DELETE DATA" --no-button "STOP SETUP" --yesno "Your data drive will now get formatted. This will delete all data on your connected HDD/SSD. Make sure that there is no important data or old funds on that data drive.
+    whiptail --title " FORMATTING DATA DRVE " --yes-button "DELETE DATA" --no-button "STOP SETUP" --yesno "Your data drive(s) will now get formatted. This will delete all data on your connected SSD/NVMe drive(s). Make sure that there is no important data or old funds on that data drive(s).
 
-Are you sure to format the HDD/SSD and DELETE ALL DATA on it?
+Are you sure to format and DELETE ALL DATA on it?
       " 11 65
 
     if [ "$?" == "0" ]; then
