@@ -556,7 +556,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
   else
     echo "RaspberryPi Firmware not in th need of update." >> $logFile
   fi
-  
+
   ######################################
   # CHECK IF REBOOT IS NEEDED
   # from actions above
