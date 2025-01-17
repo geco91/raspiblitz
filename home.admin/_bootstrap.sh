@@ -671,6 +671,8 @@ if [ "${scenario}" != "ready" ] ; then
 
   else
     echo "INFO: 'raspiblitz.setup' does not exist - wait for user config" >> ${logFile}
+    state="waitsetup"
+    /home/admin/_cache.sh set state "${state}"
     /home/admin/_cache.sh set message "${infoMessage}"
     /home/admin/_cache.sh set setupPhase "${setupPhase}"
   fi
