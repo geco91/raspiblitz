@@ -607,6 +607,7 @@ if [ "${scenario}" != "ready" ] ; then
   # add info if a flag shows that install medium was tried before
   if [ -f "/home/admin/systemcopy.flag" ]; then
     /home/admin/_cache.sh set "system_setup_secondtry" "1"
+    rm /home/admin/systemcopy.flag
   else
     /home/admin/_cache.sh set "system_setup_secondtry" "0"
   fi
@@ -711,7 +712,7 @@ if [ "${scenario}" != "ready" ] ; then
     /home/admin/_cache.sh set message "copying system"
 
     # STORAGE
-    if [ ${#storageDevice} -gt 0 ] && [ "${storageMountedPath}" = "0" ]; then
+    if [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ]; then
       /home/admin/_cache.sh set message "Init STORAGE Drive"
       error=""
       source <(/home/admin/config.scripts/blitz.data.sh setup STORAGE "${storageDevice}" "${combinedDataStorage}" "${bootFromStorage}")

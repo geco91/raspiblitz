@@ -87,6 +87,21 @@ if [ "${setupPhase}" == "migration" ]; then
 
 fi
 
+############################################
+# Fix: BOOT ORDER CHANGE FAILED
+source <(/home/admin/_cache.sh get system_setup_secondtry)
+if [ "${system_setup_secondtry}" == "1" ]; then
+  whiptail --title " BOOT ORDER CHANGE FAILED? " --msgbox "
+You already ran a setup/recover and copied the system to SSD/NVMe. But it booted again from the old install medium. To fix it:
+
+Press OK
+Wait until shutdown.
+Remove install medium.
+Power up again." 16 50
+  sudo shutdown now
+  exit 1
+fi
+
 # fresh import setup values
 source /home/admin/raspiblitz.info
 
