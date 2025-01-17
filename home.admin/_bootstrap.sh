@@ -582,7 +582,7 @@ if [ "${scenario}" != "ready" ] ; then
 
   echo "## WHEN SETUP IS NEEDED " >> $logFile
   echo "/home/admin/config.scripts/blitz.data.sh status -inspect"
-  /home/admin/config.scripts/blitz.data.sh status -inspect >> $logFile
+  source <(/home/admin/config.scripts/blitz.data.sh status -inspect)
 
   # TODO: Add info if RaspberryPi, VM or LAPTOP
 
@@ -601,7 +601,7 @@ if [ "${scenario}" != "ready" ] ; then
   /home/admin/_cache.sh set "system_setup_systemWarning" "${systemWarning}"
   /home/admin/_cache.sh set "system_setup_dataDevice" "${dataDevice}"
   /home/admin/_cache.sh set "system_setup_dataDeviceName" "${dataDeviceName}"
-  /home/admin/_cache.sh set "system_setup_dataSizeGB" "${dataSizeG}"
+  /home/admin/_cache.sh set "system_setup_dataSizeGB" "${dataSizeGB}"
   /home/admin/_cache.sh set "system_setup_dataWarning" "${dataWarning}"
 
   # add info if a flag shows that install medium was tried before
