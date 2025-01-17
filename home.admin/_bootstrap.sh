@@ -698,7 +698,7 @@ if [ "${scenario}" != "ready" ] ; then
   source ${setupFile}
 
   # when user agreed to system copy to bootable drive (flag from setupFile)
-  if [ "${copySystem}" = "1" ]; then
+  if [ "${systemCopy}" = "1" ]; then
 
     #####################################
     # SYSTEM COPY OF FRESH SYSTEM
@@ -757,7 +757,6 @@ if [ "${scenario}" != "ready" ] ; then
     umount /mnt/disk_data
 
     # TODO: disable old system boot
-
 
     # TODO: REMOVE AFTER DEBUG
     echo "DEBUG EXIT 1" >> ${logFile}

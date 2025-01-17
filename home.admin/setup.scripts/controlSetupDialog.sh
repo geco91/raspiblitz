@@ -64,18 +64,15 @@ fi
 # QuickOption: Migration from other node
 if [ "${setupPhase}" == "migration" ]; then
 
-  source <(/home/admin/_cache.sh get hddGotMigrationData migrationMode)
-  if [ "${migrationMode}" == "" ]; then
-    migrationMode="normal"
-  fi
+  source <(/home/admin/_cache.sh get system_setup_storageMigration)
   
   # show recovery dialog
-  echo "# Starting migration dialog (${hddGotMigrationData}) (${migrationMode})..."
+  echo "# Starting migration dialog (${system_setup_storageMigration}) ..."
 
-  /home/admin/setup.scripts/dialogMigration.sh ${hddGotMigrationData} ${migrationMode}
+  /home/admin/setup.scripts/dialogMigration.sh ${system_setup_storageMigration} "normal"
   if [ "$?" == "0" ]; then
     # mark migration to happen on provision
-    echo "migrationOS='${hddGotMigrationData}'" >> $SETUPFILE
+    echo "migrationOS='${system_setup_storageMigration}'" >> $SETUPFILE
     # user needs to reset password A, B & C
     echo "setPasswordA=1" >> $SETUPFILE
     echo "setPasswordB=1" >> $SETUPFILE
@@ -139,12 +136,25 @@ if [ "${setupPhase}" = "setup" ]; then
   # FORMAT DRIVE on NEW SETUP or MIGRATION UPLOAD 
   if [ "${menuresult}" == "0" ] || [ "${menuresult}" == "1" ]; then
 
-    source <(/home/admin/_cache.sh get hddGotMigrationData hddBlocksBitcoin hddBlocksLitecoin hddCandidate)
+    source <(/home/admin/_cache.sh get system_setup_askSystemCopy system_setup_bootFromStorage system_setup_combinedDataStorage)
+
+    if [ "${system_setup_askSystemCopy}" == "1" ]; then
+      # ask user about system copy
+      /home/admin/setup.scripts/dialogSystemCopy.sh
+      userChoice=$?
+      if [ "${userChoice}" == "1" ]; then
+        echo "systemCopy=1" >> $SETUPFILE
+      else
+        echo "systemCopy=0" >> $SETUPFILE
+      fi
+    fi
+
+    source <(/home/admin/_cache.sh get system_setup_storageMigration system_setup_storageBlockchainGB)
 
     # check if there is a blockchain to use (so HDD is already formatted)
     # thats also true if the node is coming from another nodeOS
     existingBlockchain=""
-    if [ "${hddBlocksBitcoin}" == "1" ] || [ "${hddGotMigrationData}" != "" ]; then
+    if [ "${system_setup_storageBlockchainGB}" == "1" ] || [ "${system_setup_storageMigration}" != "" ]; then
       existingBlockchain="BITCOIN"
     fi
 
@@ -153,32 +163,11 @@ if [ "${setupPhase}" = "setup" ]; then
     userChoice=$?
     if [ "${userChoice}" == "1" ]; then
 
-      # FORMAT DATA DRIVE
-      filesystem="ext4"
-
-      # check if there is a flag set on sd card boot section to format as btrfs (experimental)
-      flagBTRFS=$(sudo ls /boot/firmware/btrfs* 2>/dev/null | grep -c btrfs)
-      if [ "${flagBTRFS}" != "0" ]; then
-        echo "Found BTRFS flag ---> formatting with experimental BTRFS filesystem"
-        filesystem="btrfs"
-        sleep 5
-      fi
-
-      # run formatting
-      echo "Running Format: (${filesystem}) (${hddCandidate})"
-      source <(sudo /home/admin/config.scripts/blitz.datadrive.sh format ${filesystem} ${hddCandidate})
-      if [ "${error}" != "" ]; then
-        echo "FAIL ON FORMATTING THE DRIVE:"
-        echo "${error}"
-        echo "Please report as issue on the raspiblitz github."
-        exit 1
-      fi
+      echo "deleteData='all'" >> $SETUPFILE
 
     elif [ "${userChoice}" == "2" ]; then
 
-      # KEEP BLOCKCHAIN + DELETE ALL THE REST
-      # will be done by bootstrap later triggered by setup file entry
-      echo "cleanHDD=1" >> $SETUPFILE
+      echo "deleteData='keepBlockchain'" >> $SETUPFILE
 
     else
 
@@ -192,14 +181,16 @@ if [ "${setupPhase}" = "setup" ]; then
   ############################################
   # UPLOAD MIGRATION
   if [ "${menuresult}" == "1" ]; then
-    /home/admin/setup.scripts/dialogMigration.sh raspiblitz
-    if [ "$?" == "1" ]; then
-      # upload did not worked .. exit with 0 to restart process from outside loop
-      echo "Upload failed ... return to menu"
-      sleep 2
-      exit 0
-    fi
-    # user needs to reset password A
+
+    #/home/admin/setup.scripts/dialogMigration.sh raspiblitz
+    #if [ "$?" == "1" ]; then
+    #  # upload did not worked .. exit with 0 to restart process from outside loop
+    #  echo "Upload failed ... return to menu"
+    #  sleep 2
+    #  exit 0
+    #fi
+
+    echo "uploadMigration=1" >> $SETUPFILE
     echo "setPasswordA=1" >> $SETUPFILE
   fi
 
