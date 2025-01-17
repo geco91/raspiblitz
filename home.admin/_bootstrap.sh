@@ -659,10 +659,22 @@ if [ "${scenario}" != "ready" ] ; then
     infoMessage="Unkonwn Setup Phase"
   fi
 
-  # signal "WAIT LOOP: SETUP" to LCD, SSH & WEBAPI
-  /home/admin/_cache.sh set state "waitsetup"
-  /home/admin/_cache.sh set message "${infoMessage}"
-  /home/admin/_cache.sh set setupPhase "${setupPhase}"
+  # check if raspiblitz.setup exists (from former system copy step)
+   if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.setup" ]; then
+      echo "INFO: 'raspiblitz.setup' exists - skip user wait loop" >> ${logFile}
+      cp -a /var/cache/raspiblitz/hdd-inspect/raspiblitz.setup ${setupFile}
+      state="waitprovision"
+
+      # TODO: REMOVE AFTER DEBUG
+      echo "DEBUG EXIT 3" >> ${logFile}
+      exit 0
+
+  else
+    echo "INFO: 'raspiblitz.setup' does not exist - wait for user config" >> ${logFile}
+    /home/admin/_cache.sh set state "waitprovision"
+    /home/admin/_cache.sh set message "${infoMessage}"
+    /home/admin/_cache.sh set setupPhase "${setupPhase}"
+  fi
 
   #############################################
   # WAIT LOOP: USER SETUP/UPDATE/MIGRATION
@@ -682,6 +694,7 @@ if [ "${scenario}" != "ready" ] ; then
   done
 
   # get the results from the SSH-UI or WEB-UI
+  echo "LOADING 'raspiblitz.setup' ..." >> ${logFile}
   source ${setupFile}
 
   # when user agreed to system copy to bootable drive (flag from setupFile)
@@ -738,13 +751,16 @@ if [ "${scenario}" != "ready" ] ; then
 
     # put setupFile to new system (so after reboot it can auto-provision)
     source <(/home/admin/config.scripts/blitz.data.sh status)
-    mount /dev/${systemPartition} /mnt/disk_system
-    echo "copy setupFile(${setupFile}) to /mnt/disk_system/home/admin/raspiblitz.setup" >> ${logFile}
-    cp ${setupFile} /mnt/disk_system/home/admin/raspiblitz.setup
+    mount /dev/${dataPartition} /mnt/disk_data
+    echo "copy setupFile(${setupFile}) to /mnt/disk_data/app-data/raspiblitz.setup" >> ${logFile}
+    cp ${setupFile} /mnt/disk_data/home/admin/raspiblitz.setup
+    umount /mnt/disk_data
 
     # TODO: disable old system boot
 
-    echo "DEBUG EXIT" >> ${logFile}
+
+    # TODO: REMOVE AFTER DEBUG
+    echo "DEBUG EXIT 1" >> ${logFile}
     exit 0
 
     # reboot so that new system can start
@@ -756,10 +772,11 @@ if [ "${scenario}" != "ready" ] ; then
   else
     echo "Skipping System Copy" >> ${logFile}
   fi
-
-
-
 fi 
+
+# TODO: REMOVE AFTER DEBUG
+echo "DEBUG EXIT 2" >> ${logFile}
+exit 0
 
 # on RECOVER/UPDATE: auto copy system
 if [ "${scenario}" = "recover:system" ]; then

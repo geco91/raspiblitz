@@ -258,6 +258,13 @@ if [ "$action" = "status" ]; then
                     if [ -d "/var/cache/raspiblitz/hdd-inspect/sshd" ] || [ -d "/var/cache/raspiblitz/hdd-inspect/ssh-root" ]; then
                         echo "#    * SSH keys copied to RAMDISK"
                     fi
+
+                    # make copy of raspiblitz.setup to RAMDISK (if available from former systemcopy)
+                    cp -a ${mountPath}/app-data/raspiblitz.setup /var/cache/raspiblitz/hdd-inspect/raspiblitz.setup 2>/dev/null
+                    if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.setup" ]; then
+                        echo "#    * raspiblitz.setup copied to RAMDISK"
+                    fi
+
                 fi
             fi
 
