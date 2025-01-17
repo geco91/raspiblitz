@@ -121,7 +121,7 @@ cat $infoFile >> $logFile
 raspi_bootdir="/boot/firmware"
 
 ######################################
-# STOP file flag - for manual provision
+# STOP flags - for manual provision
 
 # when a file 'stop' is on the sd card bootfs partition root - stop for manual provision
 flagExists=$(ls ${raspi_bootdir}/stop 2>/dev/null | grep -c 'stop')
@@ -188,8 +188,9 @@ source ${configFile} 2>/dev/null
 # monitor LAN connection fast to display local IP changes
 /home/admin/_cache.sh focus internet_localip 0
 
-######################################
-# SET WIFI
+################################
+# SET WIFI (by file)
+################################
 
 # File: wpa_supplicant.conf
 # legacy way to set wifi of rasperrypi
@@ -208,17 +209,6 @@ if [ "${wifiFileExists}" == "1" ]; then
   echo "Getting data from file: ${raspi_bootdir}/wifi" >> ${logFile}
   ssid=$(sed -n '1p' ${raspi_bootdir}/wifi | tr -d '[:space:]')
   password=$(sed -n '2p' ${raspi_bootdir}/wifi | tr -d '[:space:]')
-fi
-
-# Recover: wifi from storage drive inspection
-source <(/home/admin/config.scripts/blitz.data.sh status -inspect)
-if [ "${scenario}" != "ready" ] && [ "${dataInspectSuccess}" == "1" ]; then
-  for file in /var/cache/raspiblitz/hdd-inspect/wifi/*; do
-    if [[ -f "$file" ]]; then
-      ssid=$(grep -m 1 '^ssid=' "$file" | cut -d'=' -f2)
-      password=$(grep -m 1 '^psk=' "$file" | cut -d'=' -f2)
-    fi
-  done
 fi
 
 # set wifi if data is available
@@ -243,10 +233,351 @@ if [ "${ssid}" != "" ] && [ "${password}" != "" ]; then
   rm ${raspi_bootdir}/wpa_supplicant.conf 2>/dev/null
 fi
 
-######################################
-# SYSTEM COPY to SSD/NVME
+################################
+# CLEANING BOOT SYSTEM
+################################
 
-source <(/home/admin/config.scripts/blitz.data.sh status -inspect)
+# Emergency cleaning logs when over 1GB (to prevent SD card filling up)
+# see https://github.com/rootzoll/raspiblitz/issues/418#issuecomment-472180944
+echo "*** Checking Log Size ***"
+logsMegaByte=$(du -c -m /var/log | grep "total" | awk '{print $1;}')
+if [ ${logsMegaByte} -gt 1000 ]; then
+  echo "WARN # Logs /var/log in are bigger then 1GB" >> $logFile
+  # dont delete directories - can make services crash
+  rm /var/log/*
+  service rsyslog restart
+  /home/admin/_cache.sh set message "WARNING: /var/log/ >1GB"
+  echo "WARN # Logs in /var/log in were bigger then 1GB and got emergency delete to prevent fillup." >> $logFile
+  ls -la /var/log >> $logFile
+  echo "If you see this in the logs please report to the GitHub issues, so LOG config needs to be optimized." >> $logFile
+  sleep 10
+else
+  echo "OK - logs are at ${logsMegaByte} MB - within safety limit" >> $logFile
+fi
+echo ""
+
+################################
+# BOOT LOGO
+################################
+
+# display 3 secs logo - try to kickstart LCD
+# see https://github.com/rootzoll/raspiblitz/issues/195#issuecomment-469918692
+# see https://github.com/rootzoll/raspiblitz/issues/647
+# see https://github.com/rootzoll/raspiblitz/pull/1580
+randnum=$(shuf -i 0-7 -n 1)
+/home/admin/config.scripts/blitz.display.sh image /home/admin/raspiblitz/pictures/startlogo${randnum}.png
+sleep 5
+/home/admin/config.scripts/blitz.display.sh hide
+
+######################################
+# WAIT FOR FIRST FULL BACKGROUND SCAN
+echo "## RaspiBlitz Cache ... wait background.scan.service to finish first scan loop" >> $logFile
+systemscan_runtime=""
+while [ "${systemscan_runtime}" == "" ]
+do
+  sleep 1
+  source <(/home/admin/_cache.sh get systemscan_runtime)
+  echo "- waiting for background.scan.service --> systemscan_runtime(${systemscan_runtime})" >> $logFile
+done
+
+################################
+# WAIT LOOP: HDD CONNECTED
+# (old RaspiBlitz Setup)
+################################
+
+echo "Waiting for HDD/SSD ..." >> $logFile
+
+scenario="" # run loop at least on time
+until [ ${#scenario} -gt 0 ] && [[ ! "${scenario}" =~ ^error ]]; do
+
+  # recheck HDD/SSD
+  source <(/home/admin/config.scripts/blitz.data.sh status)
+  echo "blitz.data.sh status - scenario: ${scenario}" >> $logFile
+
+  # in case of HDD analyse ERROR
+  if [ "${scenario}" = "error:no-storage" ]; then
+    /home/admin/_cache.sh set state "noHDD"
+    /home/admin/_cache.sh set message ">=1TB"
+  elif [ "${scenario}" =~ ^error ]; then
+    echo "FAIL - error on HDD analysis: ${scenario}" >> $logFile
+    /home/admin/_cache.sh set state "errorHDD"
+    /home/admin/_cache.sh set message "${scenario}"
+  fi
+
+  # wait for next check
+  sleep 2
+  
+done
+
+################################
+# GPT integrity check
+################################
+
+# List all block devices
+devices=$(lsblk -dno NAME | grep -E '^sd|^nvme|^vd|^mmcblk')
+# Check and fix each device
+for dev in $devices; do
+  device="/dev/$dev"
+  output=$(sudo gdisk -l $device 2>&1)
+  if echo "$output" | grep -q "PMBR size mismatch"; then
+    echo "GPT PMBR size mismatch detected on $device. Fixing..." >> $logFile
+    sgdisk -e $device
+    echo "Fixed GPT PMBR size mismatch on $device." >> $logFile
+  elif echo "$output" | grep -q "The backup GPT table is not on the end of the device"; then
+    echo "Backup GPT table is not at the end of $device. Fixing..." >> $logFile
+    sgdisk -e $device
+    echo "Fixed backup GPT table location on $device." >> $logFile
+  else
+    echo "No GPT issues detected on $device." >> $logFile
+  fi
+done
+
+#####################################
+# INIT OF FRESH SYSTEM (ALL SYSTEMS)
+#####################################
+
+if [ "${scenario}" != "ready" ] ; then
+
+  # write info for LCD
+   echo "## INIT OF FRESH SYSTEM (ALL SYSTEMS)" >> $logFile
+  /home/admin/_cache.sh set state "system-init"
+  /home/admin/_cache.sh set message "please wait"
+
+  # now that HDD/SSD is connected ... if relevant data from a previous RaspiBlitz was available
+  # /var/cache/raspiblitz/hdd-inspect exists with copy of config data to init system with
+  echo "STORAGE connected .. run inspection" >> $logFile
+  /home/admin/config.scripts/blitz.data.sh status -inspect >> $logFile
+
+  #####################################
+  # WIFI RESTORE
+  # from former RaspiBlitz
+
+  # check if there is a WIFI configuration to backup or restore
+  if [ -d "/var/cache/raspiblitz/hdd-inspect/wifi" ]; then
+    echo "WIFI RESTORE from /var/cache/raspiblitz/hdd-inspect/wpa_supplicant.conf" >> $logFile
+    /home/admin/config.scripts/internet.wifi.sh backup-restore >> $logFile
+  else
+    echo "No WIFI RESTORE because no /var/cache/raspiblitz/hdd-inspect/wpa_supplicant.conf" >> $logFile
+  fi
+
+  ################################
+  # SSH SERVER CERTS RESTORE
+  # from former RaspiBlitz
+
+  if [ -d "/var/cache/raspiblitz/hdd-inspect/sshd" ]; then
+    # INIT OLD SSH HOST KEYS on Update/Recovery to prevent "Unknown Host" on ssh client
+    echo "SSH SERVER CERTS RESTORE activating old SSH host keys" >> $logFile
+    /home/admin/config.scripts/blitz.ssh.sh restore /var/cache/raspiblitz/hdd-inspect/sshd/ssh >> $logFile
+  else
+    echo "No SSH SERVER CERTS RESTORE because no /var/cache/raspiblitz/hdd-inspect" >> $logFile
+  fi
+
+fi
+
+###################################
+# WAIT LOOP: LOCALNET / INTERNET
+# after HDD > can contain WIFI conf
+###################################
+gotLocalIP=0
+until [ ${gotLocalIP} -eq 1 ]
+do
+
+  echo "gotLocalIP(${gotLocalIP})" >> $logFile
+
+  # get latest network info directly
+  source <(/home/admin/config.scripts/internet.sh status online)
+
+  # check state of network
+  if [ ${dhcp} -eq 0 ]; then
+    # display user waiting for DHCP
+    /home/admin/_cache.sh set state "noDHCP"
+    /home/admin/_cache.sh set message "Waiting for DHCP"
+  elif [ ${#localip} -eq 0 ]; then
+    if [ ${configWifiExists} -eq 0 ]; then
+      # display user to connect LAN
+      /home/admin/_cache.sh set state "noIP-LAN"
+      /home/admin/_cache.sh set message "Connect the LAN/WAN"
+    else
+      # display user that wifi settings are not working
+      /home/admin/_cache.sh set state "noIP-WIFI"
+      /home/admin/_cache.sh set message "WIFI Settings not working"
+    fi
+  elif [ ${online} -eq 0 ]; then
+    # display user that wifi settings are not working
+    /home/admin/_cache.sh set state "noInternet"
+    /home/admin/_cache.sh set message "No connection to Internet"
+  else
+    gotLocalIP=1
+  fi
+  sleep 1
+done
+
+#####################################
+# INIT OF FRESH SYSTEM (RASPBERRY PI)
+#####################################
+
+if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
+
+  echo "## INIT OF FRESH SYSTEM (RASPBERRY PI)" >> $logFile
+
+  # set flag for reboot (only needed on raspberry pi)
+  systemInitReboot=0
+
+  ################################
+  # FS EXPAND
+  # extend sd card to maximum capacity
+
+  source <(/home/admin/config.scripts/blitz.bootdrive.sh status)
+  if [ "${needsExpansion}" == "1" ] && [ "${fsexpanded}" == "0" ]; then
+    echo "FSEXPAND needed ... starting process" >> $logFile
+    /home/admin/config.scripts/blitz.bootdrive.sh status >> $logFile
+    /home/admin/config.scripts/blitz.bootdrive.sh fsexpand >> $logFile
+    systemInitReboot=1
+    /home/admin/_cache.sh set message "FSEXPAND"
+  elif [ "${tooSmall}" == "1" ]; then
+    echo "# FAIL #######" >> $logFile
+    echo "SDCARD TOO SMALL 16GB minimum" >> $logFile
+    echo "##############" >> $logFile
+    /home/admin/_cache.sh set state "sdtoosmall"
+    echo "System stopped. Please cut power." >> $logFile
+    sleep 6000
+    shutdown now
+    sleep 100
+    exit 1
+  else
+    echo "No FS EXPAND needed. needsExpansion(${needsExpansion}) fsexpanded(${fsexpanded})" >> $logFile
+  fi
+
+  ################################
+  # FORCED SWITCH TO HDMI
+  # if a file called 'hdmi' gets
+  # placed onto the bootfs part of
+  # the sd card - switch to hdmi
+
+  forceHDMIoutput=$(ls ${raspi_bootdir}/hdmi* 2>/dev/null | grep -c hdmi)
+  if [ ${forceHDMIoutput} -eq 1 ]; then
+    /home/admin/_cache.sh set message "HDMI"
+    # delete that file (to prevent loop)
+    rm ${raspi_bootdir}/hdmi*
+    # switch to HDMI what will trigger reboot
+    echo "HDMI switch found ... activating HDMI display output & flag reboot" >> $logFile
+    /home/admin/config.scripts/blitz.display.sh set-display hdmi >> $logFile
+    systemInitReboot=1
+  else
+    echo "No HDMI switch found. " >> $logFile
+  fi
+
+  ################################
+  # SSH SERVER CERTS RESET
+  # if a file called 'ssh.reset' gets
+  # placed onto the boot part of
+  # the sd card - delete old ssh data
+
+  sshReset=$(ls ${raspi_bootdir}/ssh.reset* 2>/dev/null | grep -c reset)
+  if [ ${sshReset} -eq 1 ]; then
+    # delete that file (to prevent loop)
+    rm ${raspi_bootdir}/ssh.reset* >> $logFile
+    # delete ssh certs
+    echo "SSHRESET switch found ... stopping SSH and deleting old certs" >> $logFile
+    /home/admin/config.scripts/blitz.ssh.sh renew >> $logFile
+    /home/admin/config.scripts/blitz.ssh.sh backup >> $logFile
+    systemInitReboot=1
+    /home/admin/_cache.sh set message "SSHRESET"
+  else
+    echo "No SSHRESET switch found. " >> $logFile
+  fi
+
+  ##################################
+  # DISPLAY RESTORE (if needed)
+
+  if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" ]; then
+
+    echo "check that display class in raspiblitz.conf from HDD is different from as it is now in raspiblitz.info ..." >> $logFile
+  
+    # get display class value from raspiblitz.info
+    source <(cat ${infoFile} | grep "^displayClass=")
+    infoFileDisplayClass="${displayClass}"
+    echo "infoFileDisplayClass(${infoFileDisplayClass})" >> $logFile
+
+    # get display class value from raspiblitz.conf
+    source <(cat /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf | grep "^displayClass=")
+    confFileDisplayClass="${displayClass}"
+    echo "confFileDisplayClass(${confFileDisplayClass})" >> $logFile
+
+    # check if values are different and need to change
+    if [ "${confFileDisplayClass}" != "" ] && [ "${infoFileDisplayClass}" != "${displayClass}" ]; then
+      echo "DISPLAY RESTORE - need to update displayClass from (${infoFileDisplayClass}) to (${confFileDisplayClass})'" >> ${logFile}
+      /home/admin/config.scripts/blitz.display.sh set-display ${confFileDisplayClass} >> ${logFile}
+      systemInitReboot=1
+    else
+      echo "No DISPLAY RESTORE because no need to change" >> $logFile
+    fi
+
+  else
+    echo "No DISPLAY RESTORE because no /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" >> $logFile
+  fi
+
+  ################################
+  # UASP FIX
+
+  /home/admin/_cache.sh set message "checking HDD"
+  source <(/home/admin/config.scripts/blitz.data.sh uasp-fix)
+  if [ "${error}" != "" ]; then
+    echo "UASP FIX failed: ${error}" >> $logFile
+    /home/admin/_cache.sh set state "errorUASP"
+    /home/admin/_cache.sh set message "${error}"
+    exit 1
+  fi
+  if [ "${neededReboot}" == "1" ]; then
+    echo "UASP FIX applied ... reboot needed." >> $logFile
+    systemInitReboot=1
+  else
+    echo "No UASP FIX needed" >> $logFile
+  fi
+
+  ################################
+  # RaspberryPi 5 - Firmware Update (needs internet)
+  # https://github.com/raspiblitz/raspiblitz/issues/4359
+
+  echo "checking Firmware" >> $logFile
+  /home/admin/_cache.sh set message "checking Firmware"
+  echo "getting data" >> $logFile
+  isRaspberryPi5=$(cat /proc/device-tree/model 2>/dev/null | grep -c "Raspberry Pi 5")
+  firmwareBuildNumber=$(rpi-eeprom-update | grep "CURRENT" | cut -d "(" -f2 | sed 's/[^0-9]*//g')
+  echo "checking Firmware: isRaspberryPi5(${isRaspberryPi5}) firmwareBuildNumber(${firmwareBuildNumber})" >> $logFile
+  if [ ${isRaspberryPi5} -gt 0 ] && [ ${firmwareBuildNumber} -lt 1708097321 ]; then # Fri 16 Feb 15:28:41 UTC 2024 (1708097321)
+    echo "updating Firmware" >> $logFile
+    echo "RaspberryPi 5 detected with old firmware (${firmwareBuildNumber}) ... do update." >> $logFile
+    apt-get update -y
+    apt-get upgrade -y
+    apt-get install -y rpi-eeprom
+    rpi-eeprom-update -a
+    systemInitReboot=1
+  else
+    echo "RaspberryPi Firmware not in th need of update." >> $logFile
+  fi
+
+  ######################################
+  # CHECK IF REBOOT IS NEEDED
+  # from actions above
+
+  if [ "${systemInitReboot}" == "1" ]; then
+    echo "Reboot" >> $logFile
+    cp ${logFile} /home/admin/raspiblitz.systeminit.log
+    /home/admin/_cache.sh set state "reboot"
+    sleep 8
+    shutdown -r now
+    sleep 100
+    exit 0
+  fi
+
+fi
+
+#####################################
+# SYSTEM COPY OF FRESH SYSTEM
+#####################################
+
+source <(/home/admin/config.scripts/blitz.data.sh status)
 
 # on SETUP: ask user for format and copy of system
 if [ "${scenario}" == "setup:system" ]; then
@@ -399,365 +730,9 @@ if [ "${scenario}" == "recover:system" ]; then
   shutdown -r now
   exit 0
 
-fi 
-
-################################
-# BOOT LOGO
-################################
-
-# display 3 secs logo - try to kickstart LCD
-# see https://github.com/rootzoll/raspiblitz/issues/195#issuecomment-469918692
-# see https://github.com/rootzoll/raspiblitz/issues/647
-# see https://github.com/rootzoll/raspiblitz/pull/1580
-randnum=$(shuf -i 0-7 -n 1)
-/home/admin/config.scripts/blitz.display.sh image /home/admin/raspiblitz/pictures/startlogo${randnum}.png
-sleep 5
-/home/admin/config.scripts/blitz.display.sh hide
-
-######################################
-# WAIT FOR FIRST FULL BACKGROUND SCAN
-echo "## RaspiBlitz Cache ... wait background.scan.service to finish first scan loop" >> $logFile
-systemscan_runtime=""
-while [ "${systemscan_runtime}" == "" ]
-do
-  sleep 1
-  source <(/home/admin/_cache.sh get systemscan_runtime)
-  echo "- waiting for background.scan.service --> systemscan_runtime(${systemscan_runtime})" >> $logFile
-done
-
-################################
-# CLEANING BOOT SYSTEM
-################################
-
-# Emergency cleaning logs when over 1GB (to prevent SD card filling up)
-# see https://github.com/rootzoll/raspiblitz/issues/418#issuecomment-472180944
-echo "*** Checking Log Size ***"
-logsMegaByte=$(du -c -m /var/log | grep "total" | awk '{print $1;}')
-if [ ${logsMegaByte} -gt 1000 ]; then
-  echo "WARN # Logs /var/log in are bigger then 1GB" >> $logFile
-  # dont delete directories - can make services crash
-  rm /var/log/*
-  service rsyslog restart
-  /home/admin/_cache.sh set message "WARNING: /var/log/ >1GB"
-  echo "WARN # Logs in /var/log in were bigger then 1GB and got emergency delete to prevent fillup." >> $logFile
-  ls -la /var/log >> $logFile
-  echo "If you see this in the logs please report to the GitHub issues, so LOG config needs to be optimized." >> $logFile
-  sleep 10
-else
-  echo "OK - logs are at ${logsMegaByte} MB - within safety limit" >> $logFile
-fi
-echo ""
-
-################################
-# WAIT LOOP: HDD CONNECTED
-# (old RaspiBlitz Setup)
-################################
-
-echo "Waiting for HDD/SSD ..." >> $logFile
-
-scenario="" # run loop at least on time
-until [ ${#scenario} -gt 0 ] && [[ ! "${scenario}" =~ ^error ]]; do
-
-  # recheck HDD/SSD
-  source <(/home/admin/config.scripts/blitz.data.sh status)
-  echo "blitz.data.sh status - scenario: ${scenario}" >> $logFile
-
-  # in case of HDD analyse ERROR
-  if [ "${scenario}" = "error:no-storage" ]; then
-    /home/admin/_cache.sh set state "noHDD"
-    /home/admin/_cache.sh set message ">=1TB"
-  elif [ "${scenario}" =~ ^error ]; then
-    echo "FAIL - error on HDD analysis: ${scenario}" >> $logFile
-    /home/admin/_cache.sh set state "errorHDD"
-    /home/admin/_cache.sh set message "${scenario}"
-  fi
-
-  # wait for next check
-  sleep 2
-  
-done
-echo "HDD/SSD connected: ${hddCandidate}" >> $logFile
-
-# write info for LCD
-/home/admin/_cache.sh set state "system-init"
-/home/admin/_cache.sh set message "please wait"
-
-######################################
-# SECTION FOR POSSIBLE REBOOT ACTIONS
-systemInitReboot=0
-
-################################
-# FORCED SWITCH TO HDMI
-# if a file called 'hdmi' gets
-# placed onto the bootfs part of
-# the sd card - switch to hdmi
-################################
-
-forceHDMIoutput=$(ls ${raspi_bootdir}/hdmi* 2>/dev/null | grep -c hdmi)
-if [ ${forceHDMIoutput} -eq 1 ]; then
-  # delete that file (to prevent loop)
-  rm ${raspi_bootdir}/hdmi*
-  # switch to HDMI what will trigger reboot
-  echo "HDMI switch found ... activating HDMI display output & reboot" >> $logFile
-  /home/admin/config.scripts/blitz.display.sh set-display hdmi >> $logFile
-  systemInitReboot=1
-  /home/admin/_cache.sh set message "HDMI"
-else
-  echo "No HDMI switch found. " >> $logFile
 fi
 
-################################
-# GPT integrity check
-################################
-
-check_and_fix_gpt() {
-  local device=$1
-  output=$(sudo gdisk -l $device 2>&1)
-  if echo "$output" | grep -q "PMBR size mismatch"; then
-    echo "GPT PMBR size mismatch detected on $device. Fixing..." >> $logFile
-    sgdisk -e $device
-    echo "Fixed GPT PMBR size mismatch on $device." >> $logFile
-  elif echo "$output" | grep -q "The backup GPT table is not on the end of the device"; then
-    echo "Backup GPT table is not at the end of $device. Fixing..." >> $logFile
-    sgdisk -e $device
-    echo "Fixed backup GPT table location on $device." >> $logFile
-  else
-    echo "No GPT issues detected on $device." >> $logFile
-  fi
-}
-
-# List all block devices
-devices=$(lsblk -dno NAME | grep -E '^sd|^nvme|^vd|^mmcblk')
-
-# Check and fix each device
-for dev in $devices; do
-  check_and_fix_gpt /dev/$dev
-done
-
-################################
-# FS EXPAND
-# extend sd card to maximum capacity
-################################
-
-source <(/home/admin/config.scripts/blitz.bootdrive.sh status)
-if [ "${needsExpansion}" == "1" ] && [ "${fsexpanded}" == "0" ]; then
-  echo "FSEXPAND needed ... starting process" >> $logFile
-  /home/admin/config.scripts/blitz.bootdrive.sh status >> $logFile
-  /home/admin/config.scripts/blitz.bootdrive.sh fsexpand >> $logFile
-  systemInitReboot=1
-  /home/admin/_cache.sh set message "FSEXPAND"
-elif [ "${tooSmall}" == "1" ]; then
-  echo "# FAIL #######" >> $logFile
-  echo "SDCARD TOO SMALL 16GB minimum" >> $logFile
-  echo "##############" >> $logFile
-  /home/admin/_cache.sh set state "sdtoosmall"
-  echo "System stopped. Please cut power." >> $logFile
-  sleep 6000
-  shutdown -r now
-  slepp 100
-  exit 1
-else
-  echo "No FS EXPAND needed. needsExpansion(${needsExpansion}) fsexpanded(${fsexpanded})" >> $logFile
-fi
-
-# now that HDD/SSD is connected ... if relevant data from a previous RaspiBlitz was available
-# /var/cache/raspiblitz/hdd-inspect exists with copy of config data to init system with
-# NOTE: /var/cache/raspiblitz/hdd-inspect will not exist when HDD/SSD is already regulary mounted
-
-####################################
-# WIFI RESTORE from HDD works with
-# mem copy from datadrive inspection
-####################################
-
-# check if there is a WIFI configuration to backup or restore
-if [ -d "/var/cache/raspiblitz/hdd-inspect/wifi" ]; then
-  echo "WIFI RESTORE from /var/cache/raspiblitz/hdd-inspect/wpa_supplicant.conf" >> $logFile
-  /home/admin/config.scripts/internet.wifi.sh backup-restore >> $logFile
-else
-  echo "No WIFI RESTORE because no /var/cache/raspiblitz/hdd-inspect/wpa_supplicant.conf" >> $logFile
-fi
-
-################################
-# SSH SERVER CERTS RESTORE
-# if backup is available on HDD/SSD
-################################
-
-if [ -d "/var/cache/raspiblitz/hdd-inspect/sshd" ]; then
-  # INIT OLD SSH HOST KEYS on Update/Recovery to prevent "Unknown Host" on ssh client
-  echo "SSH SERVER CERTS RESTORE activating old SSH host keys" >> $logFile
-  /home/admin/config.scripts/blitz.ssh.sh restore /var/cache/raspiblitz/hdd-inspect/sshd/ssh >> $logFile
-else
-  echo "No SSH SERVER CERTS RESTORE because no /var/cache/raspiblitz/hdd-inspect" >> $logFile
-fi
-
-################################
-# SSH SERVER CERTS RESET
-# if a file called 'ssh.reset' gets
-# placed onto the boot part of
-# the sd card - delete old ssh data
-################################
-
-sshReset=$(ls ${raspi_bootdir}/ssh.reset* 2>/dev/null | grep -c reset)
-if [ ${sshReset} -eq 1 ]; then
-  # delete that file (to prevent loop)
-  rm ${raspi_bootdir}/ssh.reset* >> $logFile
-  # delete ssh certs
-  echo "SSHRESET switch found ... stopping SSH and deleting old certs" >> $logFile
-  /home/admin/config.scripts/blitz.ssh.sh renew >> $logFile
-  /home/admin/config.scripts/blitz.ssh.sh backup >> $logFile
-  systemInitReboot=1
-  /home/admin/_cache.sh set message "SSHRESET"
-else
-  echo "No SSHRESET switch found. " >> $logFile
-fi
-
-##################################
-# DISPLAY RESTORE (if needed)
-##################################
-if [ -f "/var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" ]; then
-
-  echo "check that display class in raspiblitz.conf from HDD is different from as it is now in raspiblitz.info ..." >> $logFile
-  
-  # get display class value from raspiblitz.info
-  source <(cat ${infoFile} | grep "^displayClass=")
-  infoFileDisplayClass="${displayClass}"
-  echo "infoFileDisplayClass(${infoFileDisplayClass})" >> $logFile
-
-  # get display class value from raspiblitz.conf
-  source <(cat /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf | grep "^displayClass=")
-  confFileDisplayClass="${displayClass}"
-  echo "confFileDisplayClass(${confFileDisplayClass})" >> $logFile
-
-  # check if values are different and need to change
-  if [ "${confFileDisplayClass}" != "" ] && [ "${infoFileDisplayClass}" != "${displayClass}" ]; then
-    echo "DISPLAY RESTORE - need to update displayClass from (${infoFileDisplayClass}) to (${confFileDisplayClass})'" >> ${logFile}
-    /home/admin/config.scripts/blitz.display.sh set-display ${confFileDisplayClass} >> ${logFile}
-    systemInitReboot=1
-  else
-    echo "No DISPLAY RESTORE because no need to change" >> $logFile
-  fi
-
-else
-  echo "No DISPLAY RESTORE because no /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" >> $logFile
-fi
-
-################################
-# UASP FIX
-################################
-
-# only if RaspberryPi
-if [ "${baseimage}" == "raspios_arm64" ]; then
-  /home/admin/_cache.sh set message "checking HDD"
-  source <(/home/admin/config.scripts/blitz.data.sh uasp-fix)
-  if [ "${error}" != "" ]; then
-    echo "UASP FIX failed: ${error}" >> $logFile
-    /home/admin/_cache.sh set state "errorUASP"
-    /home/admin/_cache.sh set message "${error}"
-    exit 1
-  fi
-  if [ "${neededReboot}" == "1" ]; then
-    echo "UASP FIX applied ... reboot needed." >> $logFile
-    systemInitReboot=1
-  else
-    echo "No UASP FIX needed" >> $logFile
-  fi
-else
-  echo "Not a RaspberryPi .. no UASP FIX needed." >> $logFile
-fi
-
-######################################
-# CHECK IF REBOOT IS NEEDED
-# from actions above
-
-if [ "${systemInitReboot}" == "1" ]; then
-  echo "Reboot" >> $logFile
-  cp ${logFile} /home/admin/raspiblitz.systeminit.log
-  /home/admin/_cache.sh set state "reboot"
-  sleep 8
-  shutdown -r now
-  sleep 100
-  exit 0
-fi
-
-###################################
-# WAIT LOOP: LOCALNET / INTERNET
-# after HDD > can contain WIFI conf
-###################################
-gotLocalIP=0
-until [ ${gotLocalIP} -eq 1 ]
-do
-
-  echo "gotLocalIP(${gotLocalIP})" >> $logFile
-
-  # get latest network info directly
-  source <(/home/admin/config.scripts/internet.sh status online)
-
-  # check state of network
-  if [ ${dhcp} -eq 0 ]; then
-    # display user waiting for DHCP
-    /home/admin/_cache.sh set state "noDHCP"
-    /home/admin/_cache.sh set message "Waiting for DHCP"
-  elif [ ${#localip} -eq 0 ]; then
-    if [ ${configWifiExists} -eq 0 ]; then
-      # display user to connect LAN
-      /home/admin/_cache.sh set state "noIP-LAN"
-      /home/admin/_cache.sh set message "Connect the LAN/WAN"
-    else
-      # display user that wifi settings are not working
-      /home/admin/_cache.sh set state "noIP-WIFI"
-      /home/admin/_cache.sh set message "WIFI Settings not working"
-    fi
-  elif [ ${online} -eq 0 ]; then
-    # display user that wifi settings are not working
-    /home/admin/_cache.sh set state "noInternet"
-    /home/admin/_cache.sh set message "No connection to Internet"
-  else
-    gotLocalIP=1
-  fi
-  sleep 1
-done
-
-################################
-# RaspberryPi 5 - Firmware Update (needs internet)
-# https://github.com/raspiblitz/raspiblitz/issues/4359
-################################
-
-echo "checking Firmware" >> $logFile
-/home/admin/_cache.sh set message "checking Firmware"
-if [ "${baseimage}" == "raspios_arm64" ]; then
-  echo "getting data" >> $logFile
-  isRaspberryPi5=$(cat /proc/device-tree/model 2>/dev/null | grep -c "Raspberry Pi 5")
-  firmwareBuildNumber=$(rpi-eeprom-update | grep "CURRENT" | cut -d "(" -f2 | sed 's/[^0-9]*//g')
-  echo "checking Firmware: isRaspberryPi5(${isRaspberryPi5}) firmwareBuildNumber(${firmwareBuildNumber})" >> $logFile
-  if [ ${isRaspberryPi5} -gt 0 ] && [ ${firmwareBuildNumber} -lt 1708097321 ]; then # Fri 16 Feb 15:28:41 UTC 2024 (1708097321)
-    echo "updating Firmware" >> $logFile
-    echo "RaspberryPi 5 detected with old firmware (${firmwareBuildNumber}) ... do update." >> $logFile
-    apt-get update -y
-    apt-get upgrade -y
-    apt-get install -y rpi-eeprom
-    rpi-eeprom-update -a
-    echo "Restarting ..." >> $logFile
-    sleep 3
-    reboot
-  else
-    echo "RaspberryPi Firmware not in th need of update." >> $logFile
-  fi
-else
-  echo "Not a RaspberryPi .. no firmware update needed." >> $logFile
-fi
-
-# write info for LCD
-/home/admin/_cache.sh set state "inspect-hdd"
-/home/admin/_cache.sh set message "please wait"
-
-# get fresh info about data drive to continue
-source <(/home/admin/config.scripts/blitz.datadrive.sh status)
-
-echo "isMounted: $isMounted" >> $logFile
-
-# check if the HDD is auto-mounted ( auto-mounted = setup-done)
-echo "HDD already part of system: $isMounted" >> $logFile
-
+# TODO REMOVE
 /home/admin/_cache.sh set state "waitsetup"
 /home/admin/_cache.sh set message "bootstrap-debug-exit"
 exit 1
