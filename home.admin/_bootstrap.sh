@@ -125,7 +125,7 @@ raspi_bootdir="/boot/firmware"
 
 # when a file 'stop' is on the sd card bootfs partition root - stop for manual provision
 flagExists=$(ls ${raspi_bootdir}/stop 2>/dev/null | grep -c 'stop')
-if [ "${flagExists}" == "1" ]; then
+if [ "${flagExists}" = "1" ]; then
   localip=$(hostname -I | awk '{print $1}')
   /home/admin/_cache.sh set state "stop"
   /home/admin/_cache.sh set message "stopped for manual provision ${localip}"
@@ -138,7 +138,7 @@ fi
 
 # VM stop signal for manual provision - when an audio device is detected on a VM
 flagExists=$(lspci | grep -c "Audio")
-if [ "${vm}" == "1"  ] && [ ${flagExists} -gt 0 ]; then
+if [ "${vm}" = "1"  ] && [ ${flagExists} -gt 0 ]; then
   localip=$(hostname -I | awk '{print $1}')
   /home/admin/_cache.sh set state "stop"
   /home/admin/_cache.sh set message "VM stopped for manual provision"
@@ -151,7 +151,7 @@ fi
 
 # when the provision did not ran thru without error (ask user for fresh sd card)
 provisionFlagExists=$(ls /home/admin/provision.flag | grep -c 'provision.flag')
-if [ "${provisionFlagExists}" == "1" ]; then
+if [ "${provisionFlagExists}" = "1" ]; then
   systemctl stop ${network}d 2>/dev/null
   /home/admin/_cache.sh set state "inconsistentsystem"
   /home/admin/_cache.sh set message "provision did not ran thru"
@@ -195,7 +195,7 @@ source ${configFile} 2>/dev/null
 # File: wpa_supplicant.conf
 # legacy way to set wifi of rasperrypi
 wpaFileExists=$(ls ${raspi_bootdir}/wpa_supplicant.conf 2>/dev/null | grep -c 'wpa_supplicant.conf')
-if [ "${wpaFileExists}" == "1" ]; then  
+if [ "${wpaFileExists}" = "1" ]; then  
   echo "Getting data from file: ${raspi_bootdir}/wpa_supplicant.conf" >> ${logFile}
   ssid=$(grep ssid "${raspi_bootdir}/wpa_supplicant.conf" | awk -F'=' '{print $2}' | tr -d '"')
   password=$(grep psk "${raspi_bootdir}/wpa_supplicant.conf" | awk -F'=' '{print $2}' | tr -d '"')
@@ -205,7 +205,7 @@ fi
 # get first line as string from wifi file (NAME OF WIFI)
 # get second line as string from wifi file (PASSWORD OF WIFI)
 wifiFileExists=$(ls ${raspi_bootdir}/wifi 2>/dev/null | grep -c 'wifi')
-if [ "${wifiFileExists}" == "1" ]; then
+if [ "${wifiFileExists}" = "1" ]; then
   echo "Getting data from file: ${raspi_bootdir}/wifi" >> ${logFile}
   ssid=$(sed -n '1p' ${raspi_bootdir}/wifi | tr -d '[:space:]')
   password=$(sed -n '2p' ${raspi_bootdir}/wifi | tr -d '[:space:]')
@@ -273,7 +273,7 @@ sleep 5
 # WAIT FOR FIRST FULL BACKGROUND SCAN
 echo "## RaspiBlitz Cache ... wait background.scan.service to finish first scan loop" >> $logFile
 systemscan_runtime=""
-while [ "${systemscan_runtime}" == "" ]
+while [ "${systemscan_runtime}" = "" ]
 do
   sleep 1
   source <(/home/admin/_cache.sh get systemscan_runtime)
@@ -416,28 +416,25 @@ done
 # INIT OF FRESH SYSTEM (RASPBERRY PI)
 #####################################
 
-if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
+if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
 
   echo "## INIT OF FRESH SYSTEM (RASPBERRY PI)" >> $logFile
 
   # set flag for reboot (only needed on raspberry pi)
   systemInitReboot=0
 
-  /home/admin/_cache.sh set status "PRE-FSEXPAND"
-  sleep 20
-
   ################################
   # FS EXPAND
   # extend sd card to maximum capacity
 
   source <(/home/admin/config.scripts/blitz.bootdrive.sh status)
-  if [ "${needsExpansion}" == "1" ] && [ "${fsexpanded}" == "0" ]; then
+  if [ "${needsExpansion}" = "1" ] && [ "${fsexpanded}" = "0" ]; then
     echo "FSEXPAND needed ... starting process" >> $logFile
     /home/admin/config.scripts/blitz.bootdrive.sh status >> $logFile
     /home/admin/config.scripts/blitz.bootdrive.sh fsexpand >> $logFile
     systemInitReboot=1
     /home/admin/_cache.sh set message "FSEXPAND"
-  elif [ "${tooSmall}" == "1" ]; then
+  elif [ "${tooSmall}" = "1" ]; then
     echo "# FAIL #######" >> $logFile
     echo "SDCARD TOO SMALL 16GB minimum" >> $logFile
     echo "##############" >> $logFile
@@ -450,9 +447,6 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
   else
     echo "No FS EXPAND needed. needsExpansion(${needsExpansion}) fsexpanded(${fsexpanded})" >> $logFile
   fi
-
-  /home/admin/_cache.sh set status "PRE-FILES"
-  sleep 10
 
   ################################
   # FORCED SWITCH TO HDMI
@@ -473,7 +467,6 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     echo "No HDMI switch found. " >> $logFile
   fi
 
-
   ################################
   # SSH SERVER CERTS RESET
   # if a file called 'ssh.reset' gets
@@ -493,9 +486,6 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
   else
     echo "No SSHRESET switch found. " >> $logFile
   fi
-
-  /home/admin/_cache.sh set status "PRE-DISPLAY"
-  sleep 10
 
   ##################################
   # DISPLAY RESTORE (if needed)
@@ -527,9 +517,6 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     echo "No DISPLAY RESTORE because no /var/cache/raspiblitz/hdd-inspect/raspiblitz.conf" >> $logFile
   fi
 
-  /home/admin/_cache.sh set status "PRE-USAP"
-  sleep 10
-
   ################################
   # UASP FIX
 
@@ -541,15 +528,12 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
     /home/admin/_cache.sh set message "${error}"
     exit 1
   fi
-  if [ "${neededReboot}" == "1" ]; then
+  if [ "${neededReboot}" = "1" ]; then
     echo "UASP FIX applied ... reboot needed." >> $logFile
     systemInitReboot=1
   else
     echo "No UASP FIX needed" >> $logFile
   fi
-
-  /home/admin/_cache.sh set status "PRE-FIRMWARE"
-  sleep 10
 
   ################################
   # RaspberryPi 5 - Firmware Update (needs internet)
@@ -572,15 +556,12 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" == "raspios_arm64" ]; then
   else
     echo "RaspberryPi Firmware not in th need of update." >> $logFile
   fi
-
-  /home/admin/_cache.sh set status "PRE-REBOOT"
-  sleep 10
-
+  
   ######################################
   # CHECK IF REBOOT IS NEEDED
   # from actions above
 
-  if [ "${systemInitReboot}" == "1" ]; then
+  if [ "${systemInitReboot}" = "1" ]; then
     echo "Reboot" >> $logFile
     cp ${logFile} /home/admin/raspiblitz.systeminit.log
     /home/admin/_cache.sh set state "reboot"
@@ -596,10 +577,8 @@ fi
 # SYSTEM COPY OF FRESH SYSTEM
 #####################################
 
-source <(/home/admin/config.scripts/blitz.data.sh status)
-
 # on SETUP: ask user for format and copy of system
-if [ "${scenario}" == "setup:system" ]; then
+if [ "${scenario}" = "setup:system" ]; then
 
   /home/admin/_cache.sh set state "setup:system-wait"
   /home/admin/_cache.sh set message "user action needed"
@@ -627,7 +606,7 @@ if [ "${scenario}" == "setup:system" ]; then
   fi
 
   echo "## WAIT LOOP: USER SETUP SYSTEM" >> ${logFile}
-  until [ "${state}" == "setup:system-result" ]
+  until [ "${state}" = "setup:system-result" ]
   do
     # check for updated state value from SSH-UI or WEB-UI for loop
     sleep 2
@@ -637,9 +616,9 @@ if [ "${scenario}" == "setup:system" ]; then
   # get user result from cache
   source <(/home/admin/_cache.sh get "system_setup_result")
   echo "system_setup_result(${system_setup_result})" >> ${logFile}
-  elif [ "${system_setup_result}" == "ignore" ]; then
+  if [ "${system_setup_result}" = "ignore" ]; then
     echo "User wants NO system copy .. skipping." >> ${logFile}
-  elif [ "${system_setup_result}" == "setup" ]; then
+  elif [ "${system_setup_result}" = "setup" ]; then
 
     ####################
     # RUN SYSTEM COPY: SETUP
@@ -648,7 +627,7 @@ if [ "${scenario}" == "setup:system" ]; then
     /home/admin/_cache.sh set state "setup:system-run"
 
     # STORAGE
-    if [ ${#storageDevice} -gt 0 ] && [ "${storageMountedPath}" == "0" ]; then
+    if [ ${#storageDevice} -gt 0 ] && [ "${storageMountedPath}" = "0" ]; then
       /home/admin/_cache.sh set message "Init STORAGE Drive"
       error=""
       source <(/home/admin/config.scripts/blitz.data.sh setup STORAGE "${storageDevice}" "${combinedDataStorage}" "${bootFromStorage}")
@@ -661,7 +640,7 @@ if [ "${scenario}" == "setup:system" ]; then
     fi
 
     # SYSTEM
-    if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" == "0" ] && [ ${#systemWarning} -eq 0 ]; then
+    if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" = "0" ] && [ ${#systemWarning} -eq 0 ]; then
       /home/admin/_cache.sh set message "Init SYSTEM Drive"
       error=""
       source <(/home/admin/config.scripts/blitz.data.sh setup SYSTEM "${systemDevice}")
@@ -706,14 +685,14 @@ if [ "${scenario}" == "setup:system" ]; then
 fi 
 
 # on RECOVER/UPDATE: auto copy system
-if [ "${scenario}" == "recover:system" ]; then
+if [ "${scenario}" = "recover:system" ]; then
 
   /home/admin/_cache.sh set state "recover:system"
   /home/admin/_cache.sh set message ""
 
 
   # STORAGE
-  if [ ${#storageDevice} -gt 0 ] && [ "${storageMountedPath}" == "0" ]; then
+  if [ ${#storageDevice} -gt 0 ] && [ "${storageMountedPath}" = "0" ]; then
     /home/admin/_cache.sh set message "Init STORAGE Drive"
     error=""
 
@@ -727,7 +706,7 @@ if [ "${scenario}" == "recover:system" ]; then
 
   # SYSTEM
   error=""
-  if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" == "0" ]; then
+  if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" = "0" ]; then
     /home/admin/_cache.sh set message "Udpating SYSTEM"
     source <(/home/admin/config.scripts/blitz.data.sh recover SYSTEM "${systemDevice}")
   else
@@ -804,12 +783,12 @@ if [ ${isMounted} -eq 0 ]; then
     fi
     /home/admin/_cache.sh set migrationMode "${migrationMode}"
 
-  elif [ "${hddRaspiData}" == "1" ]; then
+  elif [ "${hddRaspiData}" = "1" ]; then
 
     # determine if this is a recovery or an update
     # TODO: improve version/update detection later
     isRecovery=$(echo "${hddRaspiVersion}" | grep -c "${codeVersion}")
-    if [ "${isRecovery}" == "1" ]; then
+    if [ "${isRecovery}" = "1" ]; then
       infoMessage="Please start Recovery"
       setupPhase="recovery"
     else
@@ -831,12 +810,12 @@ if [ ${isMounted} -eq 0 ]; then
   #############################################
 
   echo "## WAIT LOOP: USER SETUP/UPDATE/MIGRATION" >> ${logFile}
-  until [ "${state}" == "waitprovision" ]
+  until [ "${state}" = "waitprovision" ]
   do
 
     # get fresh info about data drive (in case the hdd gets disconnected)
     source <(/home/admin/config.scripts/blitz.datadrive.sh status)
-    if [ "${hddCandidate}" == "" ]; then
+    if [ "${hddCandidate}" = "" ]; then
       /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "lost-hdd" "Lost HDD connection .. triggering reboot." "happened during WAIT LOOP: USER SETUP/UPDATE/MIGRATION" ${logFile}
       sleep 8
       shutdown -r now
@@ -847,7 +826,7 @@ if [ ${isMounted} -eq 0 ]; then
     # detect if network get deconnected again (call directly instead of cache)
     # --> "removing network cable" can be used as signal to shutdown clean on test startup
     source <(/home/admin/config.scripts/internet.sh status local)
-    if [ "${localip}" == "" ]; then
+    if [ "${localip}" = "" ]; then
       sed -i "s/^state=.*/state=errorNetwork/g" ${infoFile}
       sleep 8
       shutdown now
@@ -881,7 +860,7 @@ if [ ${isMounted} -eq 0 ]; then
   # special setup tasks (triggered by api/webui thru setupfile)
 
   # FORMAT DATA DRIVE
-  if [ "${formatHDD}" == "1" ]; then
+  if [ "${formatHDD}" = "1" ]; then
     echo "# special setup tasks: FORMAT DATA DRIVE" >> ${logFile}
       
     # check if there is a flag set on sd card boot section to format as btrfs (experimental)
@@ -909,7 +888,7 @@ if [ ${isMounted} -eq 0 ]; then
   fi
 
   # CLEAN DRIVE & KEEP BLOCKCHAIN
-  if [ "${cleanHDD}" == "1" ]; then
+  if [ "${cleanHDD}" = "1" ]; then
     echo "# special setup tasks: CLEAN DRIVE & KEEP BLOCKCHAIN" >> ${logFile}
 
     # when blockchain comes from another node migrate data first
@@ -946,13 +925,13 @@ if [ ${isMounted} -eq 0 ]; then
   fi
 
   source <(/home/admin/_cache.sh get state setupPhase)
-  if [ "${setupPhase}" == "setup" ]; then
+  if [ "${setupPhase}" = "setup" ]; then
 
     echo "# CREATING raspiblitz.conf from your setup choices" >> ${logFile}
-    if [ "${network}" == "" ]; then
+    if [ "${network}" = "" ]; then
       network="bitcoin"
     fi
-    if [ "${chain}" == "" ]; then
+    if [ "${chain}" = "" ]; then
       chain="main"
     fi
 
@@ -1063,7 +1042,7 @@ if [ ${isMounted} -eq 0 ]; then
   ###################################
   # Set Password A (in all cases)
   
-  if [ "${passwordA}" == "" ]; then
+  if [ "${passwordA}" = "" ]; then
     /home/admin/config.scripts/blitz.error.sh _bootstrap.sh "missing-passworda-2" "missing passwordA(2) in (${setupFile})" "" ${logFile}
     exit 1
   fi
@@ -1072,7 +1051,7 @@ if [ ${isMounted} -eq 0 ]; then
   /home/admin/config.scripts/blitz.passwords.sh set a "${passwordA}" >> ${logFile}
 
   # Bitcoin Mainnet
-  if [ "${mainnet}" == "on" ] || [ "${chain}" == "main" ]; then
+  if [ "${mainnet}" = "on" ] || [ "${chain}" = "main" ]; then
     echo "Provisioning ${network} Mainnet - run config script" >> ${logFile}
     /home/admin/config.scripts/bitcoin.install.sh on mainnet >> ${logFile} 2>&1
   else
@@ -1080,7 +1059,7 @@ if [ ${isMounted} -eq 0 ]; then
   fi
 
   # Bitcoin Testnet
-  if [ "${testnet}" == "on" ]; then
+  if [ "${testnet}" = "on" ]; then
     echo "Provisioning ${network} Testnet - run config script" >> ${logFile}
     /home/admin/config.scripts/bitcoin.install.sh on testnet >> ${logFile} 2>&1
   else
@@ -1088,7 +1067,7 @@ if [ ${isMounted} -eq 0 ]; then
   fi
 
   # Bitcoin Signet
-  if [ "${signet}" == "on" ]; then
+  if [ "${signet}" = "on" ]; then
     echo "Provisioning ${network} Signet - run config script" >> ${logFile}
     /home/admin/config.scripts/bitcoin.install.sh on signet >> ${logFile} 2>&1
   else
@@ -1096,7 +1075,7 @@ if [ ${isMounted} -eq 0 ]; then
   fi
 
   # if setup - run provision setup first
-  if [ "${setupPhase}" == "setup" ]; then
+  if [ "${setupPhase}" = "setup" ]; then
     echo "Calling _provision.setup.sh for basic setup tasks .." >> $logFile
     echo "Follow in a new terminal with: 'tail -f raspiblitz.provision-setup.log'" >> $logFile
     /home/admin/_cache.sh set message "Provision Setup"
@@ -1114,7 +1093,7 @@ if [ ${isMounted} -eq 0 ]; then
   fi
 
   # if migration from other nodes - run the migration provision first
-  if [ "${setupPhase}" == "migration" ]; then
+  if [ "${setupPhase}" = "migration" ]; then
     echo "Calling _provision.migration.sh for possible migrations .." >> $logFile
     /home/admin/_cache.sh set message "Provision migration"
     /home/admin/_provision.migration.sh
@@ -1131,7 +1110,7 @@ if [ ${isMounted} -eq 0 ]; then
   fi
 
   # if update/recovery/migration-followup
-  if [ "${setupPhase}" == "update" ] || [ "${setupPhase}" == "recovery" ] || [ "${setupPhase}" == "migration" ]; then
+  if [ "${setupPhase}" = "update" ] || [ "${setupPhase}" = "recovery" ] || [ "${setupPhase}" = "migration" ]; then
     echo "Calling _provision.update.sh .." >> $logFile
     echo "Follow in a new terminal with: 'tail -f raspiblitz.provision-update.log'" >> $logFile
     /home/admin/_cache.sh set message "Provision Update/Recovery/Migration"
@@ -1264,12 +1243,12 @@ fi
 
 # correct blitzapi config value
 blitzApiRunning=$(ls /etc/systemd/system/blitzapi.service 2>/dev/null | grep -c "blitzapi.service")
-if [ "${blitzapi}" == "" ] && [ ${blitzApiRunning} -eq 1 ]; then
+if [ "${blitzapi}" = "" ] && [ ${blitzApiRunning} -eq 1 ]; then
   /home/admin/config.scripts/blitz.conf.sh set blitzapi "on"
 fi
 
 # make sure users have latest credentials (if lnd is on)
-if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
+if [ "${lightning}" = "lnd" ] || [ "${lnd}" = "on" ]; then
   echo "running LND users credentials update" >> $logFile
   /home/admin/config.scripts/lnd.credentials.sh sync "${chain:-main}net" >> $logFile
 else
@@ -1348,7 +1327,7 @@ systemctl enable ${network}d
 
 # if node is stil in inital blockchain download
 source <(/home/admin/_cache.sh get btc_default_sync_initialblockdownload)
-if [ "${btc_default_sync_initialblockdownload}" == "1" ]; then
+if [ "${btc_default_sync_initialblockdownload}" = "1" ]; then
   echo "Node is still in IBD .. refresh btc_default_sync_progress faster" >> $logFile
   /home/admin/_cache.sh focus btc_default_sync_progress 0
 fi
