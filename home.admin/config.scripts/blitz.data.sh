@@ -143,6 +143,7 @@ if [ "$action" = "status" ]; then
                 if [ -d "${mountPath}/app-data" ]; then
                     if [ ${#dataDevice} -eq 0 ]; then
                         combinedDataStorage=1
+                        dataPartition="${name}"
                     fi
                     dataInspectPartition=1
                 else
