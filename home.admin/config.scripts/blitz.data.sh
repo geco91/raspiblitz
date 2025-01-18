@@ -919,8 +919,8 @@ if [ "$1" = "kill-boot" ]; then
     fi
 
     # check that device is valid and not a partition
-    isValidDevice=$(lsblk -no NAME | grep -c "^${device}")
-    if [ ${sValidDevice} -eq 0 ]; then
+    isValidDevice=$(lsblk -no NAME 2>/dev/null | grep -c "^${device}")
+    if [ ${isValidDevice} -eq 0 ]; then
         echo "error='device not valid'"
         exit 1
     fi
