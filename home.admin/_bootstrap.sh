@@ -666,10 +666,6 @@ if [ "${scenario}" != "ready" ] ; then
       cp -a /var/cache/raspiblitz/hdd-inspect/raspiblitz.setup ${setupFile}
       state="waitprovision"
 
-      # TODO: REMOVE AFTER DEBUG
-      echo "DEBUG EXIT 3" >> ${logFile}
-      exit 0
-
   else
     echo "INFO: 'raspiblitz.setup' does not exist - wait for user config" >> ${logFile}
     state="waitsetup"
@@ -701,11 +697,36 @@ if [ "${scenario}" != "ready" ] ; then
   echo "LOADING 'raspiblitz.setup' ..." >> ${logFile}
   source ${setupFile}
 
-  # when user agreed to system copy to bootable drive (flag from setupFile)
-  if [ "${systemCopy}" = "1" ]; then
+  # when this is the boot of the new system (skip to provision)
+  if [ "${systemCopy}" = "done" ]; then
+    scenario="setup"
+    setupCommand="skip"
+    bootFromStorage=0
 
-    #####################################
-    # SYSTEM COPY OF FRESH SYSTEM
+  # system recommended setup:system but user decided against - downgrade to simple setup
+  if [ "${scenario}" = "setup:system" ] && [ "${systemCopy}" = "no" ] && [ "${deleteData}" = "all" ]; then
+    scenario="setup"
+    setupCommand="setup"
+    bootFromStorage=0
+
+  # user agreed to system copy & delete all data
+  elif [ "${scenario}" = "setup:system" ] && [ "${systemCopy}" = "yes" ] && [ "${deleteData}" = "all" ]; then
+    setupCommand="setup"
+
+  # user agreed to run system from install medium and delete all data
+  elif [ "${scenario}" = "setup" ] && [ "${deleteData}" = "all" ]; then
+    setupCommand="setup"
+    bootFromStorage=0
+
+  # run recovery
+  elif [ "${scenario}" = "recover:system" ] || [ "${scenario}" = "recover" ]; then
+    setupCommand="recover"
+  fi
+
+  ###############################################
+  # SYSTEM COPY OF FRESH SYSTEM (SETUP & RECOVER)
+
+  if [ "${setupCommand}" = "setup" ] || [ "${setupCommand}" = "recover" ]; then
 
     echo "SYSTEM COPY OF FRESH SYSTEM" >> ${logFile}
     /home/admin/_cache.sh set state "systemcopy"
@@ -713,11 +734,10 @@ if [ "${scenario}" != "ready" ] ; then
 
     # STORAGE
     if [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ]; then
-      /home/admin/_cache.sh set message "Init STORAGE Drive"
       error=""
-      source <(/home/admin/config.scripts/blitz.data.sh setup STORAGE "${storageDevice}" "${combinedDataStorage}" "${bootFromStorage}")
+      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} STORAGE "${storageDevice}" "${combinedDataStorage}" "${bootFromStorage}")
       if [ "${error}" != "" ]; then
-        echo "FAIL: 'setup STORAGE' failed error(${error})" >> ${logFile}
+        echo "FAIL: '${setupCommand} STORAGE' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
         /home/admin/_cache.sh set message "${error}"
         exit 1
@@ -726,11 +746,10 @@ if [ "${scenario}" != "ready" ] ; then
 
     # SYSTEM
     if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" = "0" ] && [ ${#systemWarning} -eq 0 ]; then
-      /home/admin/_cache.sh set message "Init SYSTEM Drive"
       error=""
-      source <(/home/admin/config.scripts/blitz.data.sh setup SYSTEM "${systemDevice}")
+      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} SYSTEM "${systemDevice}")
       if [ "${error}" != "" ]; then
-        echo "FAIL: 'setup SYSTEM' failed error(${error})" >> ${logFile}
+        echo "FAIL: '${setupCommand} SYSTEM' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
         /home/admin/_cache.sh set message "${error}"
         exit 1
@@ -739,190 +758,66 @@ if [ "${scenario}" != "ready" ] ; then
 
     # DATA
     if [ ${#dataDevice} -gt 0 ] && [ ${#dataWarning} -eq 0 ]; then
-      /home/admin/_cache.sh set message "Init DATA Drive"
       error=""
-      source <(/home/admin/config.scripts/blitz.data.sh setup DATA "${systemDevice}")
+      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} DATA "${systemDevice}")
       if [ "${error}" != "" ]; then
-        echo "FAIL: 'setup DATA' failed error(${error})" >> ${logFile}
+        echo "FAIL: '${setupCommand} DATA' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
         /home/admin/_cache.sh set message "${error}"
         exit 1
       fi
     fi
 
-    # put flag file into old system 
-    touch /home/admin/systemcopy.flag
+    # when system was isntalled on new boot drive 
+    if [ "${scenario}" = "setup:system" ] || [ "${scenario}" = "recover:system" ]; then
 
-    # put setupFile to new system (so after reboot it can auto-provision)
-    source <(/home/admin/config.scripts/blitz.data.sh status)
-    mount /dev/${dataPartition} /mnt/disk_data
-    echo "copy setupFile(${setupFile}) to /mnt/disk_data/app-data/raspiblitz.setup" >> ${logFile}
-    cp ${setupFile} /mnt/disk_data/home/admin/raspiblitz.setup
-    umount /mnt/disk_data
+      # mark systemCopy as done in raspiblitz.setup
+      if ! sed -i '' "s/^systemCopy=.*/systemCopy=done/" "${setupFile}"; then
+        echo "error='failed to update systemCopy in setupFile'" >&2
+        exit 1
+      fi
 
-    # TODO: disable old system boot
+      # put setupFile to new system (so after reboot it dows not need to ask user again)
+      source <(/home/admin/config.scripts/blitz.data.sh status)
+      mount /dev/${dataPartition} /mnt/disk_data
+      echo "copy setupFile(${setupFile}) to /mnt/disk_data/app-data/raspiblitz.setup" >> ${logFile}
+      cp ${setupFile} /mnt/disk_data/home/admin/raspiblitz.setup
+      umount /mnt/disk_data
 
-    # TODO: REMOVE AFTER DEBUG
-    echo "DEBUG EXIT 1" >> ${logFile}
-    exit 0
+      # put flag file into old system 
+      touch /home/admin/systemcopy.flag
 
-    # reboot so that new system can start
-    /home/admin/_cache.sh set state "reboot"
-    /home/admin/_cache.sh set message "restarting system"
-    shutdown -r now
-    exit 0
+      # TODO: disable old system boot
+      sudo umount /dev/mmcblk0p1
+      sudo parted --script /dev/mmcblk0 rm 1
+
+      # reboot so that new system can start
+      /home/admin/_cache.sh set state "reboot"
+      /home/admin/_cache.sh set message "restarting system"
+      shutdown -r now
+      exit 0
+    fi
 
   else
     echo "Skipping System Copy" >> ${logFile}
   fi
-fi 
 
-# TODO: REMOVE AFTER DEBUG
-echo "DEBUG EXIT 2" >> ${logFile}
-exit 0
+  #############################################
+  # MIGRATION FILE UPLOAD
+  #############################################
 
-# on RECOVER/UPDATE: auto copy system
-if [ "${scenario}" = "recover:system" ]; then
-
-  /home/admin/_cache.sh set state "recover:system"
-  /home/admin/_cache.sh set message ""
-
-
-  # STORAGE
-  if [ ${#storageDevice} -gt 0 ] && [ "${storageMountedPath}" = "0" ]; then
-    /home/admin/_cache.sh set message "Init STORAGE Drive"
-    error=""
-
-    if [ "${error}" != "" ]; then
-      echo "FAIL: 'setup STORAGE' failed error(${error})" >> ${logFile}
-      /home/admin/_cache.sh set state "error"
-      /home/admin/_cache.sh set message "${error}"
-      exit 1
-    fi
-  fi
-
-  # SYSTEM
-  error=""
-  if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" = "0" ]; then
-    /home/admin/_cache.sh set message "Udpating SYSTEM"
-    source <(/home/admin/config.scripts/blitz.data.sh recover SYSTEM "${systemDevice}")
-  else
-    /home/admin/_cache.sh set message "Udpating STORAGE"
-    source <(/home/admin/config.scripts/blitz.data.sh recover STORAGE "${storageDevice}" "${combinedDataStorage}" "${bootFromStorage}")
-  fi
-  if [ "${error}" != "" ]; then
-    echo "FAIL: 'setup SYSTEM' failed error(${error})" >> ${logFile}
-    /home/admin/_cache.sh set state "error"
-    /home/admin/_cache.sh set message "${error}"
-    exit 1
-  fi
-
-  # TODO: DISABLE INSTALL MEDIUM
-
-  # reboot from updated system
-  /home/admin/_cache.sh set state "reboot"
-  /home/admin/_cache.sh set message "restarting system"
-  shutdown -r now
-  exit 0
-
-fi
-
-# TODO REMOVE
-/home/admin/_cache.sh set state "waitsetup"
-/home/admin/_cache.sh set message "bootstrap-debug-exit"
-exit 1
+  # TODO: MIGRATION FILE UPLOAD as a second UI waitloop (after storage setup )
 
   #############################################
   # PROVISION PROCESS
   #############################################
 
-  # refresh data from info file
-  source <(/home/admin/_cache.sh get state setupPhase)
-  echo "# PROVISION PROCESS with setupPhase(${setupPhase})" >> ${logFile}
-
-  # mark system on sd card as in setup process
+  # set flag that provision process was started on thsi system 
   echo "the provision process was started but did not finish yet" > /home/admin/provision.flag
 
-  # get fresh data from setup file & data drive
-  source <(/home/admin/config.scripts/blitz.datadrive.sh status)
- 
-  # special setup tasks (triggered by api/webui thru setupfile)
-
-  # FORMAT DATA DRIVE
-  if [ "${formatHDD}" = "1" ]; then
-    echo "# special setup tasks: FORMAT DATA DRIVE" >> ${logFile}
-      
-    # check if there is a flag set on sd card boot section to format as btrfs (experimental)
-    filesystem="ext4"
-    flagBTRFS=$(ls ${raspi_bootdir}/btrfs* 2>/dev/null | grep -c btrfs)
-    if [ "${flagBTRFS}" != "0" ]; then
-      echo "Found BTRFS flag ---> formatting with experimental BTRFS filesystem" >> ${logFile}
-      filesystem="btrfs"
-    fi
-
-    # run formatting
-    error=""
-    /home/admin/_cache.sh set state "formathdd"
-    echo "Running Format: filesystem(${filesystem}) hddCandidate(${hddCandidate})" >> ${logFile}
-    source <(/home/admin/config.scripts/blitz.datadrive.sh format ${filesystem} ${hddCandidate})
-    if [ "${error}" != "" ]; then
-      echo "FAIL ON FORMATTING THE DRIVE:" >> ${logFile}
-      echo "${error}" >> ${logFile}
-      echo "Please report as issue on the raspiblitz github." >> ${logFile}
-      /home/admin/_cache.sh set state "errorHDD"
-      /home/admin/_cache.sh set message "Fail Format (${filesystem})"
-      exit 1
-    fi
-    /home/admin/_cache.sh set setupPhase "setup"
-  fi
-
-  # CLEAN DRIVE & KEEP BLOCKCHAIN
-  if [ "${cleanHDD}" = "1" ]; then
-    echo "# special setup tasks: CLEAN DRIVE & KEEP BLOCKCHAIN" >> ${logFile}
-
-    # when blockchain comes from another node migrate data first
-    if [ "${hddGotMigrationData}" != "" ]; then
-        clear
-        echo "Migrating Blockchain of ${hddGotMigrationData}'" >> ${logFile}
-        source <(/home/admin/config.scripts/blitz.migration.sh migration-${hddGotMigrationData})
-        if [ "${error}" != "0" ]; then
-          echo "MIGRATION OF BLOCKHAIN FAILED: ${err}" >> ${logFile}
-          echo "Format data disk on laptop & recover funds with fresh sd card using seed words + static channel backup." >> ${logFile}
-          /home/admin/_cache.sh set state "errorHDD"
-          /home/admin/_cache.sh set message "Fail Migrate Blockchain (${hddGotMigrationData})"
-          exit 1
-        fi
-    fi
-
-    # delete everything but blockchain
-    echo "Deleting everything on HDD/SSD while keeping blockchain ..." >> ${logFile}
-    /home/admin/config.scripts/blitz.datadrive.sh tempmount 1>/dev/null 2>/dev/null
-    /home/admin/config.scripts/blitz.datadrive.sh clean all -keepblockchain >> ${logFile}
-    if [ "${error}" != "" ]; then
-       echo "CLEANING HDD FAILED:" >> ${logFile}
-      echo "${error}" >> ${logFile}
-      echo "Please report as issue on the raspiblitz github." >> ${logFile}
-      /home/admin/_cache.sh set state "errorHDD"
-      /home/admin/_cache.sh set message "Fail Cleaning HDD"
-      exit 1
-    fi
-    /home/admin/config.scripts/blitz.datadrive.sh unmount >> ${logFile}
-    /home/admin/_cache.sh set setupPhase "setup"
-
-    sleep 2
-
-  fi
-
-  source <(/home/admin/_cache.sh get state setupPhase)
-  if [ "${setupPhase}" = "setup" ]; then
+  if [ "${scenario}" = "setup" ]; then
 
     echo "# CREATING raspiblitz.conf from your setup choices" >> ${logFile}
-    if [ "${network}" = "" ]; then
-      network="bitcoin"
-    fi
-    if [ "${chain}" = "" ]; then
-      chain="main"
-    fi
 
     # source the raspiblitz version
     source /home/admin/_version.info
@@ -939,13 +834,21 @@ exit 1
     echo "raspiBlitzVersion='${codeVersion}'" >> $TEMPCONFIGFILE
     echo "lcdrotate='1'" >> $TEMPCONFIGFILE
     echo "lightning='${lightning}'" >> $TEMPCONFIGFILE
-    echo "network='${network}'" >> $TEMPCONFIGFILE
-    echo "chain='${chain}'" >> $TEMPCONFIGFILE
+    echo "network='bitcoin'" >> $TEMPCONFIGFILE
+    echo "chain='main'" >> $TEMPCONFIGFILE
     echo "hostname='${hostname}'" >> $TEMPCONFIGFILE
     echo "runBehindTor='on'" >> $TEMPCONFIGFILE
   fi
 
-  # make sure HDD is mounted (could be freshly formatted by user on last loop)
+  /home/admin/config.scripts/blitz.data.sh mount >> ${logFile}
+  if [ $? -eq 1 ]; then
+    echo "FAIL: blitz.data.sh mount failed" >> ${logFile}
+    /home/admin/_cache.sh set state "error"
+    /home/admin/_cache.sh set message "blitz.data.sh mount failed"
+    exit 1
+  fi
+
+  # make sure STORAGE is mounted (could be freshly formatted by user on last loop)
   source <(/home/admin/config.scripts/blitz.datadrive.sh status)
   echo "Temp mounting (2) data drive (hddFormat='${hddFormat}')" >> ${logFile}
   source <(/home/admin/config.scripts/blitz.datadrive.sh tempmount)
