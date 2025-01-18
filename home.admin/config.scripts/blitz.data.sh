@@ -927,10 +927,12 @@ if [ "$1" = "kill-boot" ]; then
 
     # get boot partition by checking filesystem type and flags
     bootPartition=""
-    for part in $(lsblk -no NAME "/dev/${device}" | grep "^${device}p\?[0-9]"); do
-        if blkid "/dev/${part}" | grep -q "TYPE=\"vfat\"" && \
-           parted "/dev/${device}" print | grep "^ *[0-9]" | grep -q "boot\|esp"; then
-            bootPartition="${part}"
+    partitionNumber=""
+    for partNumber in $(parted -s "/dev/${device}" print | grep "^ *[0-9]" | awk '{print $1}'); do
+        if blkid "/dev/${device}${partNumber}" | grep -q "TYPE=\"vfat\"" && \
+           parted "/dev/${device}" print | grep "^ *${partNumber}" | grep -q "boot\|esp"; then
+            bootPartition="${device}${partNumber}"
+            partitionNumber="${partNumber}"
             break
         fi
     done
@@ -943,13 +945,6 @@ if [ "$1" = "kill-boot" ]; then
     # check if boot partition was found
     if [ -z "${bootPartition}" ]; then
         echo "error='boot partition not found'"
-        exit 1
-    fi
-
-    # get partition number from device name
-    partitionNumber=$(echo "${bootPartition}" | grep -o '[0-9]*$')
-    if [ "${partitionNumber}" = "" ]; then
-        echo "error='partition number not found'"
         exit 1
     fi
 
