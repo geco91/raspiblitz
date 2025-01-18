@@ -912,8 +912,6 @@ fi
 
 if [ "$1" = "kill-boot" ]; then
     
-    echo "# blitz.data.sh kill-boot $2"
-
     device=$2
     if [ ${#device} -eq 0 ]; then
         echo "error='missing device'"
