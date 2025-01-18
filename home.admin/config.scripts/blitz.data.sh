@@ -925,15 +925,22 @@ if [ "$1" = "kill-boot" ]; then
         exit 1
     fi
 
-    # get boot partition by checking filesystem type and flags
+    # detect partition naming scheme
+    if [[ "${device}" =~ nvme|mmcblk ]]; then
+        separator="p"
+    else
+        separator=""
+    fi
+
+    # find boot partion of device
     bootPartition=""
     partitionNumber=""
     for partNumber in $(parted -s "/dev/${device}" print | grep "^ *[0-9]" | awk '{print $1}'); do
-        echo "# checking /dev/${device}${partNumber}"
-        blkid "/dev/${device}${partNumber}"
-        if blkid "/dev/${device}${partNumber}" | grep -q "TYPE=\"vfat\"" && \
+        partitionPath="/dev/${device}${separator}${partNumber}"
+        echo "# checking ${partitionPath}"
+        if blkid "${partitionPath}" | grep -q "TYPE=\"vfat\"" && \
            parted "/dev/${device}" print | grep "^ *${partNumber}" | grep -q "boot\|esp"; then
-            bootPartition="${device}${partNumber}"
+            bootPartition="${device}${separator}${partNumber}"
             partitionNumber="${partNumber}"
             break
         fi
