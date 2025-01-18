@@ -787,9 +787,15 @@ if [ "${scenario}" != "ready" ] ; then
       # put flag file into old system 
       touch /home/admin/systemcopy.flag
 
-      # TODO: disable old system boot
-      sudo umount /dev/mmcblk0p1
-      sudo parted --script /dev/mmcblk0 rm 1
+      # disable old system boot
+      echo "# disable old system boot" >> ${logFile}
+      /home/admin/config.scripts/blitz.data.sh kill-boot ${installDevice} # TODO: blitz.data.sh status needs add installDevice
+      if [ $? -eq 1 ]; then
+        echo "FAIL: blitz.data.sh kill-boot \"${installDevice}\" failed" >> ${logFile}
+        /home/admin/_cache.sh set state "error"
+        /home/admin/_cache.sh set message "blitz.data.sh kill-boot failed"
+        exit 1
+      fi
 
       # reboot so that new system can start
       /home/admin/_cache.sh set state "reboot"

@@ -937,7 +937,6 @@ if [ "$1" = "kill-boot" ]; then
     partitionNumber=""
     for partNumber in $(parted -s "/dev/${device}" print | grep "^ *[0-9]" | awk '{print $1}'); do
         partitionPath="/dev/${device}${separator}${partNumber}"
-        echo "# checking ${partitionPath}"
         if blkid "${partitionPath}" | grep -q "TYPE=\"vfat\"" && \
            parted "/dev/${device}" print | grep "^ *${partNumber}" | grep -q "boot\|esp\|lba"; then
             bootPartition="${device}${separator}${partNumber}"
@@ -958,9 +957,7 @@ if [ "$1" = "kill-boot" ]; then
     fi
 
     # make sure boot partition is not mounted
-    echo "# unmounting boot partition (${bootPartition}) (${partitionNumber})"
-    exit 1
-
+    echo "# killing boot partition (${bootPartition})"
     umount "/dev/${bootPartition}" 2>/dev/null
     parted --script "/dev/${device}" rm "${partitionNumber}"
     if [ $? -ne 0 ]; then
