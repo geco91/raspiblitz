@@ -929,6 +929,8 @@ if [ "$1" = "kill-boot" ]; then
     bootPartition=""
     partitionNumber=""
     for partNumber in $(parted -s "/dev/${device}" print | grep "^ *[0-9]" | awk '{print $1}'); do
+        echo "# checking /dev/${device}${partNumber}"
+        blkid "/dev/${device}${partNumber}"
         if blkid "/dev/${device}${partNumber}" | grep -q "TYPE=\"vfat\"" && \
            parted "/dev/${device}" print | grep "^ *${partNumber}" | grep -q "boot\|esp"; then
             bootPartition="${device}${partNumber}"
