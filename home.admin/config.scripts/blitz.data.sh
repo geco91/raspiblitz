@@ -2,12 +2,15 @@
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
     >&2 echo "# managing the data drive(s) with new bootable setups for RaspberryPi, VMs and Laptops"
     >&2 echo "# blitz.data.sh status [-inspect] # auto detect the old/best drives to use for storage, system and data"
+    >&2 echo "# blitz.data.sh mount # mounts all drives and link all data folders"
+    >&2 echo "# blitz.data.sh unmount # unmounts all drives"
     >&2 echo "# blitz.data.sh setup STOARGE [device] combinedData=[0|1] bootFromStorage=[0|1]"
     >&2 echo "# blitz.data.sh setup SEPERATE-SYSTEM [device]"
     >&2 echo "# blitz.data.sh setup SEPERATE-DATA [device]"
     >&2 echo "# blitz.data.sh recover STOARGE [device] combinedData=[0|1] bootFromStorage=[0|1]"
     >&2 echo "# blitz.data.sh recover SEPERATE-SYSTEM [device]"
     >&2 echo "# blitz.data.sh recover SEPERATE-DATA [device]"
+    >&2 echo "# blitz.data.sh kill-boot [device] # deactivate boot function from install medium"
     >&2 echo "# blitz.data.sh migration [umbrel|citadel|mynode] [partition] [-test] # will migrate partition to raspiblitz"
     >&2 echo "# blitz.data.sh uasp-fix [-info] # deactivates UASP for non supported USB HDD Adapters"
     echo "error='missing parameters'"
@@ -60,7 +63,7 @@ fi
 # STATUS
 ###################
 
-if [ "$action" = "status" ]; then
+if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount" ]; then
 
     echo "# blitz.data.sh status"
 
@@ -565,8 +568,36 @@ if [ "$action" = "status" ]; then
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
 
-    exit 0
+    if [ "$action" = "status" ]; then
+        exit 0
+    fi
 fi
+
+###################
+# MOUNT
+###################
+
+if [ "$action" = "mount" ]; then
+
+    # check if all drives are mounted - if not mount them and edit/check fstab
+
+    # link data & storage to one drive unter /mnt/hdd
+
+    # link legacy path for direcories and files - check old blitz.datadrive.sh link
+
+    echo "error='TODO blitz.data.sh mount'"
+    exit 1
+fi
+
+###################
+# UNMOUNT
+###################
+
+if [ "$action" = "unmount" ]; then
+    echo "error='TODO blitz.data.sh unmount'"
+    exit 1
+fi
+
 
 ###################
 # SETUP & RECOVER
@@ -873,6 +904,70 @@ EOF
     echo "# OK - ${action} done"
 
     exit 0
+fi
+
+###################
+# MIGRATION
+###################
+
+if [ "$1" = "kill-boot" ]; then
+    
+    echo "# blitz.data.sh kill-boot $2"
+
+    device=$2
+    if [ ${#device} -eq 0 ]; then
+        echo "error='missing device'"
+        exit 1
+    fi
+
+    # check that device is valid and not a partition
+    isValidDevice=$(lsblk -no NAME | grep -c "^${device}")
+    if [ ${sValidDevice} -eq 0 ]; then
+        echo "error='device not valid'"
+        exit 1
+    fi
+
+    # get boot partition by checking filesystem type and flags
+    bootPartition=""
+    for part in $(lsblk -no NAME "/dev/${device}" | grep "^${device}p\?[0-9]"); do
+        if blkid "/dev/${part}" | grep -q "TYPE=\"vfat\"" && \
+           parted "/dev/${device}" print | grep "^ *[0-9]" | grep -q "boot\|esp"; then
+            bootPartition="${part}"
+            break
+        fi
+    done
+    
+    # fallback to first partition if no boot partition found
+    if [ -z "${bootPartition}" ]; then
+        bootPartition=$(lsblk -no NAME "/dev/${device}" | grep "^${device}p\?[0-9]" | head -1)
+    fi
+
+    # check if boot partition was found
+    if [ -z "${bootPartition}" ]; then
+        echo "error='boot partition not found'"
+        exit 1
+    fi
+
+    # get partition number from device name
+    partitionNumber=$(echo "${bootPartition}" | grep -o '[0-9]*$')
+    if [ "${partitionNumber}" = "" ]; then
+        echo "error='partition number not found'"
+        exit 1
+    fi
+
+    # make sure boot partition is not mounted
+    echo "# unmounting boot partition (${bootPartition}) (${partitionNumber})"
+    exit 1
+
+    umount "/dev/${bootPartition}" 2>/dev/null
+    parted --script "/dev/${device}" rm "${partitionNumber}"
+    if [ $? -ne 0 ]; then
+        echo "error='failed to remove boot partition'"
+        exit 1
+    else
+        echo "# OK - boot partition removed"
+        exit 0
+    fi
 fi
 
 ###################
