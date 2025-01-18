@@ -939,7 +939,7 @@ if [ "$1" = "kill-boot" ]; then
         partitionPath="/dev/${device}${separator}${partNumber}"
         echo "# checking ${partitionPath}"
         if blkid "${partitionPath}" | grep -q "TYPE=\"vfat\"" && \
-           parted "/dev/${device}" print | grep "^ *${partNumber}" | grep -q "boot\|esp"; then
+           parted "/dev/${device}" print | grep "^ *${partNumber}" | grep -q "boot\|esp\|lba"; then
             bootPartition="${device}${separator}${partNumber}"
             partitionNumber="${partNumber}"
             break
