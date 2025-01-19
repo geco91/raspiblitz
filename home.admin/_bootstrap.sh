@@ -554,7 +554,7 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
     rpi-eeprom-update -a
     systemInitReboot=1
   else
-    echo "RaspberryPi Firmware not in th need of update." >> $logFile
+    echo "RaspberryPi Firmware no need for update." >> $logFile
   fi
 
   ######################################
