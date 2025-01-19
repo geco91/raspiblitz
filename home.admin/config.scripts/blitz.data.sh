@@ -501,11 +501,23 @@ if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount
     possibleInstallDevices=$(lsblk -o NAME,TRAN -d | grep -E 'mmc|usb|sr' | cut -d' ' -f1)
     for device in ${possibleInstallDevices}; do
         echo "# check device ${device}"
-        if parted "/dev/${device}" print 2>/dev/null | grep "^ *[0-9]" | grep -q "boot\|esp\|lba"; then
+        if parted --script "/dev/${device}" print 2>/dev/null | grep "^ *[0-9]" | grep -q "boot\|esp\|lba"; then
             installDevice="${device}"
             break
         fi
     done
+
+    # check if any partition of device is mounted as root
+    installDeviceActive=0
+    if [ ${#installDevice} -gt 0 ]; then
+        # get all partitions and check if mounted as root
+        for partition in $(lsblk -no NAME "/dev/${installDevice}" | grep "^${installDevice}"); do
+            if findmnt -n -o TARGET "/dev/${partition}" | grep -q "^/$"; then
+                installDeviceActive=1
+                break
+            fi
+        done
+    fi
 
     #################
     # Define Scenario
@@ -579,6 +591,7 @@ if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount
     echo "dataConfigFound='${dataConfigFound}'"
     echo "dataInspectSuccess='${dataInspectSuccess}'"
     echo "installDevice='${installDevice}'"
+    echo "installDeviceActive='${installDeviceActive}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
