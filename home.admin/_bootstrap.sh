@@ -603,6 +603,8 @@ if [ "${scenario}" != "ready" ] ; then
   /home/admin/_cache.sh set "system_setup_dataDeviceName" "${dataDeviceName}"
   /home/admin/_cache.sh set "system_setup_dataSizeGB" "${dataSizeGB}"
   /home/admin/_cache.sh set "system_setup_dataWarning" "${dataWarning}"
+  /home/admin/_cache.sh set "system_setup_installDevice" "${installDevice}"
+  /home/admin/_cache.sh set "system_setup_installDeviceReadOnly" "${installDeviceReadOnly}"
 
   # add info if a flag shows that install medium was tried before
   if [ -f "/home/admin/systemcopy.flag" ]; then
@@ -789,7 +791,7 @@ if [ "${scenario}" != "ready" ] ; then
 
       # disable old system boot
       echo "# disable old system boot" >> ${logFile}
-      /home/admin/config.scripts/blitz.data.sh kill-boot ${installDevice} # TODO: blitz.data.sh status needs add installDevice
+      /home/admin/config.scripts/blitz.data.sh kill-boot ${installDevice} >> ${logFile}
       if [ $? -eq 1 ]; then
         echo "FAIL: blitz.data.sh kill-boot \"${installDevice}\" failed" >> ${logFile}
         /home/admin/_cache.sh set state "error"
