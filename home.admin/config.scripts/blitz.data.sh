@@ -990,36 +990,15 @@ if [ "$1" = "kill-boot" ]; then
         exit 1
     fi
 
-    # raspberrypi: remove PARTUUID value but keep entry
-    if [ "${computerType}" = "raspberrypi" ]; then
-        echo "# RaspberryPi - clear PARTUUID value in cmdline.txt"
-        sed -i "s/root=PARTUUID=[^ ]*/root=PARTUUID=/" /boot/firmware/cmdline.txt
-    fi
-
-    # remove boot flags from partition
-    echo "# removing boot flags from partition ${bootPartition}"
-    
-    # check and remove boot flag
-    if parted "/dev/${device}" print | grep "^ *${partitionNumber}" | grep -q "boot"; then
-        parted --script "/dev/${device}" set "${partitionNumber}" boot off
-    fi
-    
-    # check and remove esp flag
-    if parted "/dev/${device}" print | grep "^ *${partitionNumber}" | grep -q "esp"; then
-        parted --script "/dev/${device}" set "${partitionNumber}" esp off
-    fi
-    
-    # check and remove lba flag
-    if parted "/dev/${device}" print | grep "^ *${partitionNumber}" | grep -q "lba"; then
-        parted --script "/dev/${device}" set "${partitionNumber}" lba off
-    fi
-    
-    # verify flags are removed
-    if parted "/dev/${device}" print | grep "^ *${partitionNumber}" | grep -q "boot\|esp\|lba"; then
-        echo "error='failed to remove boot flags'"
+    # killing boot partition (needs to remove to also work on raspberrypi)
+    echo "# killing boot partition (${bootPartition})"
+    umount "/dev/${bootPartition}" 2>/dev/null
+    parted --script "/dev/${device}" rm "${partitionNumber}"
+    if [ $? -ne 0 ]; then
+        echo "error='failed to remove boot partition'"
         exit 1
     else
-        echo "# OK - boot flags removed"
+        echo "# OK - boot partition removed"
         exit 0
     fi
 
