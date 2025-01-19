@@ -494,6 +494,19 @@ if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount
     fi
 
     #################
+    # Install Device
+
+    # find the first device (sd card, usb, cd rom) with a boot partition
+    installDevice=""
+    possibleInstallDevices = $(lsblk -o NAME,TRAN -d | grep -E 'mmc|usb|sr' | cut -d' ' -f1)
+    for device in ${possibleInstallDevices}; do
+        if parted "/dev/${device}" print 2>/dev/null | grep "^ *[0-9]" | grep -q "boot\|esp\|lba"; then
+            installDevice="${device}"
+            break
+        fi
+    done
+
+    #################
     # Define Scenario
 
     # migration: detected data from another node implementation
@@ -564,6 +577,7 @@ if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount
     echo "dataMountedPath='${dataMountedPath}'"
     echo "dataConfigFound='${dataConfigFound}'"
     echo "dataInspectSuccess='${dataInspectSuccess}'"
+    echo "installDevice='${installDevice}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
