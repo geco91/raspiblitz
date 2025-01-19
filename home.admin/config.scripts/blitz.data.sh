@@ -507,12 +507,20 @@ if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount
         fi
     done
 
-    # check if any partition of device is mounted as root
+    # check if any partition of install device is mounted as root
     installDeviceActive=0
     if [ ${#installDevice} -gt 0 ]; then
         rootPartition=$(lsblk -no NAME,MOUNTPOINT "/dev/${installDevice}"| awk '$2 == "/"' | sed 's/[└├]─//g' | cut -d' ' -f1)
         if [ ${#rootPartition} -gt 0 ]; then
             installDeviceActive=1
+        fi
+    fi
+
+    # check if install device is read-only
+    installDeviceReadOnly=0
+    if [ ${#installDevice} -gt 0 ]; then
+        if [ -f "/sys/block/${installDevice}/ro" ] && [ "$(cat /sys/block/${installDevice}/ro)" = "1" ]; then
+            installDeviceReadOnly=1
         fi
     fi
 
@@ -589,6 +597,7 @@ if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount
     echo "dataInspectSuccess='${dataInspectSuccess}'"
     echo "installDevice='${installDevice}'"
     echo "installDeviceActive='${installDeviceActive}'"
+    echo "installDeviceReadOnly='${installDeviceReadOnly}'"
     echo "combinedDataStorage='${combinedDataStorage}'"
     echo "bootFromStorage='${bootFromStorage}'"
     echo "bootFromSD='${bootFromSD}'"
