@@ -990,15 +990,30 @@ if [ "$1" = "kill-boot" ]; then
         exit 1
     fi
 
-    # make sure boot partition is not mounted
-    echo "# killing boot partition (${bootPartition})"
-    umount "/dev/${bootPartition}" 2>/dev/null
-    parted --script "/dev/${device}" rm "${partitionNumber}"
-    if [ $? -ne 0 ]; then
-        echo "error='failed to remove boot partition'"
+    # remove boot flags from partition
+    echo "# removing boot flags from partition ${bootPartition}"
+    
+    # check and remove boot flag
+    if parted "/dev/${device}" print | grep "^ *${partitionNumber}" | grep -q "boot"; then
+        parted --script "/dev/${device}" set "${partitionNumber}" boot off
+    fi
+    
+    # check and remove esp flag
+    if parted "/dev/${device}" print | grep "^ *${partitionNumber}" | grep -q "esp"; then
+        parted --script "/dev/${device}" set "${partitionNumber}" esp off
+    fi
+    
+    # check and remove lba flag
+    if parted "/dev/${device}" print | grep "^ *${partitionNumber}" | grep -q "lba"; then
+        parted --script "/dev/${device}" set "${partitionNumber}" lba off
+    fi
+    
+    # verify flags are removed
+    if parted "/dev/${device}" print | grep "^ *${partitionNumber}" | grep -q "boot\|esp\|lba"; then
+        echo "error='failed to remove boot flags'"
         exit 1
     else
-        echo "# OK - boot partition removed"
+        echo "# OK - boot flags removed"
         exit 0
     fi
 fi
