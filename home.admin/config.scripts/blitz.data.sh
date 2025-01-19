@@ -990,6 +990,12 @@ if [ "$1" = "kill-boot" ]; then
         exit 1
     fi
 
+    # raspberrypi: remove PARTUUID value but keep entry
+    if [ "${computerType}" = "raspberrypi" ]; then
+        echo "# RaspberryPi - clear PARTUUID value in cmdline.txt"
+        sed -i "s/root=PARTUUID=[^ ]*/root=PARTUUID=/" /boot/firmware/cmdline.txt
+    fi
+
     # remove boot flags from partition
     echo "# removing boot flags from partition ${bootPartition}"
     
@@ -1016,6 +1022,7 @@ if [ "$1" = "kill-boot" ]; then
         echo "# OK - boot flags removed"
         exit 0
     fi
+
 fi
 
 ###################
