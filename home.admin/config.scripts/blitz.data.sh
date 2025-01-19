@@ -512,6 +512,7 @@ if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount
     if [ ${#installDevice} -gt 0 ]; then
         # get all partitions and check if mounted as root
         for partition in $(lsblk -no NAME "/dev/${installDevice}" | grep "^${installDevice}"); do
+            echo
             if findmnt -n -o TARGET "/dev/${partition}" | grep -q "^/$"; then
                 installDeviceActive=1
                 break
