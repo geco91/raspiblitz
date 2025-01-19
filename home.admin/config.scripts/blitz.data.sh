@@ -500,6 +500,7 @@ if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount
     installDevice=""
     possibleInstallDevices=$(lsblk -o NAME,TRAN -d | grep -E 'mmc|usb|sr' | cut -d' ' -f1)
     for device in ${possibleInstallDevices}; do
+        echo "# check device ${device}"
         if parted "/dev/${device}" print 2>/dev/null | grep "^ *[0-9]" | grep -q "boot\|esp\|lba"; then
             installDevice="${device}"
             break
