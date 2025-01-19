@@ -510,14 +510,10 @@ if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount
     # check if any partition of device is mounted as root
     installDeviceActive=0
     if [ ${#installDevice} -gt 0 ]; then
-        # get all partitions and check if mounted as root
-        for partition in $(lsblk -no NAME "/dev/${installDevice}" | grep "^${installDevice}"); do
-            echo "# check partition ${partition}"
-            if findmnt -n -o TARGET "/dev/${partition}" | grep -q "^/$"; then
-                installDeviceActive=1
-                break
-            fi
-        done
+        rootPartition=$(lsblk -no NAME,MOUNTPOINT "/dev/${installDevice}"| awk '$2 == "/"' | sed 's/[└├]─//g' | cut -d' ' -f1)
+        if [ ${#rootPartition} -gt 0 ]; then
+            installDeviceActive=1
+        fi
     fi
 
     #################
