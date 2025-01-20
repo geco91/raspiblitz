@@ -738,7 +738,7 @@ if [ "${scenario}" != "ready" ] ; then
 
     echo "SYSTEM COPY OF FRESH SYSTEM" >> ${logFile}
     /home/admin/_cache.sh set state "systemcopy"
-    /home/admin/_cache.sh set message "copying system"
+    /home/admin/_cache.sh set message "system setup"
 
     # STORAGE
     if [ ${#storageDevice} -gt 0 ] && [ ${#storageMountedPath} -eq 0 ]; then
@@ -755,7 +755,7 @@ if [ "${scenario}" != "ready" ] ; then
     # SYSTEM
     if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" = "0" ] && [ ${#systemWarning} -eq 0 ]; then
       error=""
-      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} SYSTEM "${systemDevice}")
+      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} SEPERATE-SYSTEM "${systemDevice}")
       if [ "${error}" != "" ]; then
         echo "FAIL: '${setupCommand} SYSTEM' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
@@ -767,7 +767,7 @@ if [ "${scenario}" != "ready" ] ; then
     # DATA
     if [ ${#dataDevice} -gt 0 ] && [ ${#dataWarning} -eq 0 ]; then
       error=""
-      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} DATA "${systemDevice}")
+      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} SEPERATE-DATA "${systemDevice}")
       if [ "${error}" != "" ]; then
         echo "FAIL: '${setupCommand} DATA' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
