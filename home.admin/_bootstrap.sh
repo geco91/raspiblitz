@@ -569,6 +569,8 @@ if [ "${scenario}" != "ready" ] && [ "${baseimage}" = "raspios_arm64" ]; then
     shutdown -r now
     sleep 100
     exit 0
+  else
+    echo "No Reboot needed" >> $logFile
   fi
 
 fi
@@ -578,6 +580,7 @@ fi
 # WHEN SETUP IS NEEDED  
 ############################
 
+echo "Check if setup is needed --> scenario(${scenario})" >> $logFile
 if [ "${scenario}" != "ready" ] ; then
 
   echo "## WHEN SETUP IS NEEDED " >> $logFile
@@ -1087,6 +1090,8 @@ else
   # Blockchain & Lightning not running
   ############################
 
+  echo "# NORMAL START BOOTSTRAP" >> $logFile
+
   #################################
   # FIX BLOCKCHAINDATA OWNER (just in case)
   # https://github.com/rootzoll/raspiblitz/issues/239#issuecomment-450887567
@@ -1120,6 +1125,7 @@ fi
 ##############################
 # BOOSTRAP IN EVERY SITUATION
 ##############################
+echo "# BOOSTRAP IN EVERY SITUATION" >> $logFile
 /home/admin/_cache.sh set setupPhase "starting"
 
 # load data from config file fresh
