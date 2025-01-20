@@ -9,6 +9,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  echo "lnd.monitor.sh [mainnet|testnet|signet] wallet"
  echo "lnd.monitor.sh [mainnet|testnet|signet] channels"
  echo "lnd.monitor.sh [mainnet|testnet|signet] fees"
+ echo "lnd.monitor.sh [mainnet|testnet|signet] kickstart"
  exit 1
 fi
 
@@ -351,6 +352,23 @@ if [ "$2" = "fees" ]; then
   exit 0
   
 fi
+
+######################################################
+# Peer Kick Start
+######################################################
+
+if [ "$2" = "kickstart" ]; then
+  echo "### PEER KICK START - NOT IMPLEMENTED YET"
+  exit 0
+fi
+
+if [ "$2" = "kickstart-list-generate" ]; then
+  echo "### Generating Kick Start List ..."
+  
+  
+  exit 0
+fi
+
 
 echo "FAIL - Unknown Parameter $2"
 exit 1
