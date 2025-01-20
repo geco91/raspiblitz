@@ -382,31 +382,34 @@ gotLocalIP=0
 until [ ${gotLocalIP} -eq 1 ]
 do
 
-  echo "gotLocalIP(${gotLocalIP})" >> $logFile
-
   # get latest network info directly
   source <(/home/admin/config.scripts/internet.sh status online)
 
   # check state of network
   if [ ${dhcp} -eq 0 ]; then
     # display user waiting for DHCP
+    echo "Waiting for DHCP ..." >> $logFile
     /home/admin/_cache.sh set state "noDHCP"
     /home/admin/_cache.sh set message "Waiting for DHCP"
   elif [ ${#localip} -eq 0 ]; then
     if [ ${configWifiExists} -eq 0 ]; then
       # display user to connect LAN
+      echo "Waiting for LAN/WAN ..." >> $logFile
       /home/admin/_cache.sh set state "noIP-LAN"
       /home/admin/_cache.sh set message "Connect the LAN/WAN"
     else
       # display user that wifi settings are not working
+      echo "WIFI Settings not working ..." >> $logFile
       /home/admin/_cache.sh set state "noIP-WIFI"
       /home/admin/_cache.sh set message "WIFI Settings not working"
     fi
   elif [ ${online} -eq 0 ]; then
     # display user that wifi settings are not working
+    echo "Waiting for internet ..." >> $logFile
     /home/admin/_cache.sh set state "noInternet"
     /home/admin/_cache.sh set message "No connection to Internet"
   else
+    echo "gotLocalIP(${gotLocalIP})" >> $logFile
     gotLocalIP=1
   fi
   sleep 1
