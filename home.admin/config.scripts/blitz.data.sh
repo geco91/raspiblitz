@@ -5,17 +5,17 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
     >&2 echo "# blitz.data.sh mount # mounts all drives and link all data folders"
     >&2 echo "# blitz.data.sh unmount # unmounts all drives"
     >&2 echo "# blitz.data.sh setup STOARGE [device] combinedData=[0|1] bootFromStorage=[0|1]"
-    >&2 echo "# blitz.data.sh setup SEPERATE-SYSTEM [device]"
-    >&2 echo "# blitz.data.sh setup SEPERATE-DATA [device]"
+    >&2 echo "# blitz.data.sh setup SYSTEM [device]"
+    >&2 echo "# blitz.data.sh setup DATA [device]"
     >&2 echo "# blitz.data.sh recover STOARGE [device] combinedData=[0|1] bootFromStorage=[0|1]"
-    >&2 echo "# blitz.data.sh recover SEPERATE-SYSTEM [device]"
-    >&2 echo "# blitz.data.sh recover SEPERATE-DATA [device]"
+    >&2 echo "# blitz.data.sh recover SYSTEM [device]"
+    >&2 echo "# blitz.data.sh recover DATA [device]"
     >&2 echo "# blitz.data.sh kill-boot [device] # deactivate boot function from install medium"
     >&2 echo "# blitz.data.sh migration [umbrel|citadel|mynode] [partition] [-test] # will migrate partition to raspiblitz"
     >&2 echo "# blitz.data.sh uasp-fix [-info] # deactivates UASP for non supported USB HDD Adapters"
     echo "error='missing parameters'"
     exit 1
-fi
+
 
 ###################
 # BASICS
@@ -637,9 +637,9 @@ fi
 
 if [ "$action" = "setup" ] || [ "$action" = "recover" ]; then
 
-    # check that it is a valid setup type: STORAGE, SEPERATE-DATA, SEPERATE-SYSTEM
+    # check that it is a valid setup type: STORAGE, DATA, SYSTEM
     actionType=$2
-    if [ "${actionType}" != "STORAGE" ] && [ "${actionType}" != "SEPERATE-DATA" ] && [ "${actionType}" != "SEPERATE-SYSTEM" ]; then
+    if [ "${actionType}" != "STORAGE" ] && [ "${actionType}" != "DATA" ] && [ "${actionType}" != "SYSTEM" ]; then
         echo "# actionType(${actionType})"
         echo "error='setup type not supported'"
         exit 1
@@ -704,7 +704,7 @@ if [ "$action" = "setup" ] || [ "$action" = "recover" ]; then
     # PARTITION & FORMAT (only if not in recovery)
 
     # SYSTEM (single drive)
-    if [ "${action}" = "setup" ] && [ "${actionType}" = "SEPERATE-SYSTEM" ]; then
+    if [ "${action}" = "setup" ] && [ "${actionType}" = "SYSTEM" ]; then
         echo "# SYSTEM"
         echo "# .. partitioning"
         sfdisk --delete /dev/${actionDevice} 2>/dev/null
@@ -761,7 +761,7 @@ if [ "$action" = "setup" ] || [ "$action" = "recover" ]; then
         umount /mnt/disk_storage
 
     # DATA (single drive)
-    elif [ "${action}" = "setup" ] && [ "${actionType}" = "SEPERATE-DATA" ]; then
+    elif [ "${action}" = "setup" ] && [ "${actionType}" = "DATA" ]; then
         echo "# DATA"
         echo "# .. partitioning"
         sfdisk --delete /dev/${actionDevice} 2>/dev/null
@@ -784,7 +784,7 @@ if [ "$action" = "setup" ] || [ "$action" = "recover" ]; then
     ##########################
     # MAKE BOOTABLE
 
-    if [ "${action}" = "setup" ] && ([ "${actionType}" = "SEPERATE-SYSTEM" ] || [ ${actionBootFromStorage} -eq 1 ]); then
+    if [ "${action}" = "setup" ] && ([ "${actionType}" = "SYSTEM" ] || [ ${actionBootFromStorage} -eq 1 ]); then
         echo "# MAKE BOOTABLE"
 
         # RASPBERRY PI
@@ -831,7 +831,7 @@ if [ "$action" = "setup" ] || [ "$action" = "recover" ]; then
     ##########################
     # COPY SYSTEM
 
-    if [ ${actionType} = "SEPERATE-SYSTEM" ] || [ ${actionBootFromStorage} -eq 1 ]; then
+    if [ ${actionType} = "SYSTEM" ] || [ ${actionBootFromStorage} -eq 1 ]; then
         echo "# SYSTEM COPY"
 
         # copy the boot drive

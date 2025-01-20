@@ -755,7 +755,7 @@ if [ "${scenario}" != "ready" ] ; then
     # SYSTEM
     if [ ${#systemDevice} -gt 0 ] && [ "${bootFromStorage}" = "0" ] && [ ${#systemWarning} -eq 0 ]; then
       error=""
-      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} SEPERATE-SYSTEM "${systemDevice}")
+      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} SYSTEM "${systemDevice}")
       if [ "${error}" != "" ]; then
         echo "FAIL: '${setupCommand} SYSTEM' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
@@ -767,7 +767,7 @@ if [ "${scenario}" != "ready" ] ; then
     # DATA
     if [ ${#dataDevice} -gt 0 ] && [ ${#dataWarning} -eq 0 ]; then
       error=""
-      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} SEPERATE-DATA "${systemDevice}")
+      source <(/home/admin/config.scripts/blitz.data.sh ${setupCommand} DATA "${systemDevice}")
       if [ "${error}" != "" ]; then
         echo "FAIL: '${setupCommand} DATA' failed error(${error})" >> ${logFile}
         /home/admin/_cache.sh set state "error"
