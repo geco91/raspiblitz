@@ -641,7 +641,7 @@ if [ "$action" = "setup" ] || [ "$action" = "recover" ]; then
     actionType=$2
     if [ "${actionType}" != "STORAGE" ] && [ "${actionType}" != "DATA" ] && [ "${actionType}" != "SYSTEM" ]; then
         echo "# actionType(${actionType})"
-        echo "error='setup type not supported'"
+        echo "error='type(${actionType}) not supported'"
         exit 1
     fi
 
