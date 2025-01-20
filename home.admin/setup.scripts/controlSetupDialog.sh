@@ -174,10 +174,6 @@ if [ "${setupPhase}" = "setup" ]; then
       fi
     fi
 
-    echo "system_setup_storageBlockchainGB='${system_setup_storageBlockchainGB}'"
-    echo "existingBlockchain='${existingBlockchain}'"
-    sleep 10
-
     # ask user about possible existing blockchain and formatting HDD
     /home/admin/setup.scripts/dialogDeleteData.sh "${existingBlockchain}"
     userChoice=$?
