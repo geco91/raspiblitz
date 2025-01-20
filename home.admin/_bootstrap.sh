@@ -584,6 +584,7 @@ fi
 ############################
 
 echo "Check if setup is needed --> scenario(${scenario})" >> $logFile
+echo "Comparison result: $( [ "${scenario}" != "ready" ] && echo "true" || echo "false" )" >> $logFile
 if [ "${scenario}" != "ready" ] ; then
 
   echo "## WHEN SETUP IS NEEDED " >> $logFile
