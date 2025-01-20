@@ -378,8 +378,7 @@ fi
 # WAIT LOOP: LOCALNET / INTERNET
 # after HDD > can contain WIFI conf
 ###################################
-gotLocalIP=0
-until [ ${gotLocalIP} -eq 1 ]
+while true; do
 do
 
   # get latest network info directly
@@ -410,8 +409,8 @@ do
     /home/admin/_cache.sh set state "noInternet"
     /home/admin/_cache.sh set message "No connection to Internet"
   else
-    echo "gotLocalIP(${gotLocalIP})" >> $logFile
-    gotLocalIP=1
+    echo "OK got localIP & Internet .." >> $logFile
+    break
   fi
   sleep 1
 done
