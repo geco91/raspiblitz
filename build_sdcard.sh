@@ -329,7 +329,9 @@ isDebianInHosts=$(grep -c "debian" /etc/hosts)
 if [ ${isDebianInHosts} -eq 0 ]; then
   echo "# Adding debian to /etc/hosts"
   echo "127.0.1.1       debian" | tee -a /etc/hosts > /dev/null
-  systemctl restart networking
+  if [ "${baseimage}" != "raspios_arm64" ]; then
+    systemctl restart networking
+  fi
 fi
 
 echo "*** Remove unnecessary packages ***"
