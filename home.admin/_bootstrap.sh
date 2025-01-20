@@ -379,7 +379,6 @@ fi
 # after HDD > can contain WIFI conf
 ###################################
 while true; do
-do
 
   # get latest network info directly
   source <(/home/admin/config.scripts/internet.sh status online)
@@ -649,7 +648,7 @@ if [ "${scenario}" != "ready" ] ; then
     infoMessage="Please start Setup"
     /home/admin/_cache.sh set "system_setup_askSystemCopy" "1"
 
-  if [ "${scenario}" = "setup:system" ]; then
+  elif [ "${scenario}" = "setup" ]; then
     setupPhase="setup"
     infoMessage="Please start Setup"
 

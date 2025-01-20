@@ -65,8 +65,6 @@ fi
 
 if [ "$action" = "status" ] || [ "$action" = "mount" ] || [ "$action" = "unmount" ]; then
 
-    echo "# blitz.data.sh status"
-
     # optional: parameter
     userWantsInspect=0
     if [ "$2" = "-inspect" ]; then
