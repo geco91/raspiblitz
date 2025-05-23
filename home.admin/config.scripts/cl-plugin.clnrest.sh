@@ -9,7 +9,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
 fi
 
 # check and load raspiblitz config to know which network is running
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 # check and install qrencode if not present
 if [ $(dpkg-query -l | grep "ii  qrencode" | wc -l) = 0 ]; then
@@ -48,7 +48,7 @@ if [ "$1" = connect ]; then
   # hidden service to https://xx.onion
   /home/admin/config.scripts/tor.onion-service.sh ${netprefix}clnrest 443 ${portprefix}7378 1>/dev/null
 
-  toraddress=$(sudo cat /mnt/hdd/tor/${netprefix}clnrest/hostname)
+  toraddress=$(sudo cat /mnt/hdd/app-data/tor/${netprefix}clnrest/hostname)
   rune=$($lightningcli_alias createrune | jq -r .rune)
   url="https://${localip}:${portprefix}7378/"
   # clnrest://http://your_hidden_service.onion:your_port?&rune=your_rune

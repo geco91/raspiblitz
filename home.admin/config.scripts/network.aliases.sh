@@ -21,7 +21,7 @@ fi
 if [ "$1" = getvars ]; then
 
   source /home/admin/raspiblitz.info
-  source /mnt/hdd/raspiblitz.conf 2>/dev/null
+  source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
 
   if [ ${#network} -eq 0 ]; then
     network=bitcoin
@@ -102,7 +102,7 @@ if [ "$1" = getvars ]; then
   # typeprefix is: "" | c
   if [ "${LNTYPE}" == "lnd" ]; then
     typeprefix=''
-    lndConfFile="/mnt/hdd/lnd/${netprefix}lnd.conf"
+    lndConfFile="/mnt/hdd/app-data/lnd/${netprefix}lnd.conf"
   fi
   echo "typeprefix=${typeprefix}"
   echo "lndConfFile=${lndConfFile}"

@@ -15,14 +15,14 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   exit 1
 fi
 
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 localip=$(hostname -I | awk '{print $1}')
 
 # menu
 if [ "$1" = "menu" ]; then
 
   if systemctl is-active --quiet lnproxy; then
-    torAddress=$(sudo cat /mnt/hdd/tor/lnproxy/hostname 2>/dev/null)
+    torAddress=$(sudo cat /mnt/hdd/app-data/tor/lnproxy/hostname 2>/dev/null)
     sudo /home/admin/config.scripts/blitz.display.sh qr "${torAddress}"
     whiptail --title " lnproxy server API" --msgbox "\
 Use your hidden service as a relay on the lnproxy Tor website:
@@ -165,7 +165,7 @@ EOF
   # setting value in raspi blitz config
   /home/admin/config.scripts/blitz.conf.sh set lnproxy "on"
 
-  torAddress=$(sudo cat /mnt/hdd/tor/lnproxy/hostname 2>/dev/null)
+  torAddress=$(sudo cat /mnt/hdd/app-data/tor/lnproxy/hostname 2>/dev/null)
   echo
   echo "# Use your hidden service as a relay on the lnproxy Tor website:"
   echo "dx7pn6ehykq6cadce4bjbxn5tf64z7e3fufpxgxce7n4f5eja476cpyd.onion"

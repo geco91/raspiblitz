@@ -11,31 +11,54 @@ fi
 # GATHER HARDWARE INFO
 #######################
 
-# detect known SBCs
-board=""
+# detect info about the computer
+computerType="pc"
+computerVersion=1
+
+# detect generic RaspberryPi
+isRaspberryPi=$(cat /proc/device-tree/model 2>/dev/null | grep -c "Raspberry Pi")
+if [ ${isRaspberryPi} -gt 0 ]; then
+    computerType="raspberrypi"
+    computerVersion=0 #unknown
+fi
 
 # detect RaspberryPi 3
 isRaspberryPi3=$(cat /proc/device-tree/model 2>/dev/null | grep -c "Raspberry Pi 3")
 if [ "${isRaspberryPi3}" == "1" ]; then
-    board="rp3"
+    computerType="raspberrypi"
+    computerVersion=3
 fi
 
 # detect RaspberryPi 4
 isRaspberryPi4=$(cat /proc/device-tree/model 2>/dev/null | grep -c "Raspberry Pi 4")
-if [ "${isRaspberryPi4}" == "1" ]; then
-    board="rp4"
+if [ ${isRaspberryPi4} -gt 0 ]; then
+    computerType="raspberrypi"
+    computerVersion=4
 fi
 
 # detect RaspberryPi 5
 isRaspberryPi5=$(cat /proc/device-tree/model 2>/dev/null | grep -c "Raspberry Pi 5")
 if [ "${isRaspberryPi5}" == "1" ]; then
-    board="rp5"
+    computerType="raspberrypi"
+    computerVersion=5
 fi
 
 # detect VM
 isVM=$(grep -c 'hypervisor' /proc/cpuinfo)
 if [ ${isVM} -gt 0 ]; then
-    board="vm"
+    computerType="vm"
+fi
+
+# detect NVMe drive
+gotNVMe=$(lsblk -o TRAN | grep -c nvme)
+if [ ${gotNVMe} -gt 0 ]; then
+    gotNVMe=1
+fi
+
+# detect USB drive
+gotUSB=$(lsblk -o TRAN | grep -c usb)
+if [ ${gotUSB} -gt 0 ]; then
+    gotUSB=1
 fi
 
 # get how many RAM (in MB)
@@ -49,7 +72,10 @@ ramGB=$(awk '/MemTotal/ {printf( "%d\n", $2 / 950000 )}' /proc/meminfo)
 #######################
 
 if [ "$1" = "status" ]; then
-    echo "board='${board}'"
+    echo "computerType='${computerType}'"
+    echo "computerVersion=${computerVersion}"
     echo "ramMB=${ramMB}"
     echo "ramGB=${ramGB}"
+    echo "gotNVMe=${gotNVMe}"
+    echo "gotUSB=${gotUSB}"
 fi

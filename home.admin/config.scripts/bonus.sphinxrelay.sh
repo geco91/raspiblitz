@@ -16,7 +16,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
   echo "bonus.sphinxrelay.sh github sync"
   exit 1
 fi
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -204,7 +204,7 @@ if [ "$1" = "write-environment" ]; then
   cat /home/sphinxrelay/sphinx-relay/config/app.json | \
   jq ".production.tls_location = \"/mnt/hdd/app-data/lnd/tls.cert\"" | \
   jq ".production.macaroon_location = \"/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon\"" | \
-  jq ".production.lnd_log_location = \"/mnt/hdd/lnd/logs/${network}/${chain}net/lnd.log\"" | \
+  jq ".production.lnd_log_location = \"/mnt/hdd/app-data/lnd/logs/${network}/${chain}net/lnd.log\"" | \
   jq ".production.node_http_port = \"3300\"" | \
   jq ".production.public_url = \"${publicURL}\"" > /home/sphinxrelay/sphinx-relay/config/app.json.tmp
   mv /home/sphinxrelay/sphinx-relay/config/app.json.tmp /home/sphinxrelay/sphinx-relay/config/app.json
@@ -388,7 +388,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     /home/admin/config.scripts/bonus.nodejs.sh on
 
     # make sure keysend is on
-    keysendOn=$(cat /mnt/hdd/lnd/lnd.conf | grep -c '^accept-keysend=1')
+    keysendOn=$(cat /mnt/hdd/app-data/lnd/lnd.conf | grep -c '^accept-keysend=1')
 	  if [ "${keysendOn}" == "0" ]; then
       echo "ERR: keysend is not activated in LND"
       echo "Activate it in the LND config and restart LND"
@@ -449,12 +449,12 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     echo ""
 
     # Hidden Service if Tor is active
-    source /mnt/hdd/raspiblitz.conf
+    source /mnt/hdd/app-data/raspiblitz.conf
     if [ "${runBehindTor}" = "on" ]; then
       # make sure to keep in sync with tor.network.sh script
       /home/admin/config.scripts/tor.onion-service.sh sphinxrelay 80 3302 443 3303
       # get TOR address and store it readable for sphinxrelay user
-      toraddress=$(sudo cat /mnt/hdd/tor/sphinxrelay/hostname 2>/dev/null)
+      toraddress=$(sudo cat /mnt/hdd/app-data/tor/sphinxrelay/hostname 2>/dev/null)
       sudo -u sphinxrelay bash -c "echo '${toraddress}' > /home/sphinxrelay/sphinx-relay/dist/toraddress.txt"
     fi
 

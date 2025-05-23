@@ -20,7 +20,7 @@ sudo apt-get install -y qrencode 1>/dev/null 2>/dev/null
 
 # load raspiblitz config data
 source /home/admin/raspiblitz.info
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 #### PARAMETER
 
@@ -97,7 +97,7 @@ elif [ "${targetWallet}" = "zeus-ios" ]; then
     port="8080"
     usingIP2TOR="LND-REST-API"
     forceTOR=1
-    host=$(sudo cat /mnt/hdd/tor/lndrest8080/hostname)
+    host=$(sudo cat /mnt/hdd/app-data/tor/lndrest8080/hostname)
     connectInfo="- Start the Zeus Wallet --> Advanced Setup\n- Connect a Node --> Use Scan Icon (upper right corner) \n- Scan QR Code from LCD -> Save Node Config"
 
 elif [ "${targetWallet}" = "zeus-android" ]; then
@@ -105,7 +105,7 @@ elif [ "${targetWallet}" = "zeus-android" ]; then
     port="8080"
     usingIP2TOR="LND-REST-API"
     forceTOR=1
-    host=$(sudo cat /mnt/hdd/tor/lndrest8080/hostname)
+    host=$(sudo cat /mnt/hdd/app-data/tor/lndrest8080/hostname)
     connectInfo="- Start the Zeus Wallet --> Advanced Setup\n- Connect a Node --> Use Scan Icon (upper right corner) \n- Scan QR Code from LCD -> Save Node Config"
 
 elif [ "${targetWallet}" = "sendmany-android" ]; then
@@ -134,7 +134,7 @@ elif [ "${targetWallet}" = "fullynoded-lnd" ]; then
     port="8080"
     usingIP2TOR="LND-REST-API"
     forceTOR=1
-    host=$(sudo cat /mnt/hdd/tor/lndrest8080/hostname)
+    host=$(sudo cat /mnt/hdd/app-data/tor/lndrest8080/hostname)
     connectInfo="- start Fully Noded and go to:\n Settings' -> 'Node Manger' -> 'scan QR'"
 
 else
@@ -159,19 +159,19 @@ if [ ${forceTOR} -eq 1 ]; then
   # depending on RPC or REST use different TOR address
   if [ "${port}" == "10009" ]; then
     echo "# TOR LND RPC"
-    host=$(sudo cat /mnt/hdd/tor/lndrpc/hostname)
+    host=$(sudo cat /mnt/hdd/app-data/tor/lndrpc/hostname)
     if [ "${host}" == "" ]; then
       echo "# setting up onion service ..."
       /home/admin/config.scripts/tor.onion-service.sh lndrpc 10009 10009
-      host=$(sudo cat /mnt/hdd/tor/lndrpc/hostname)
+      host=$(sudo cat /mnt/hdd/app-data/tor/lndrpc/hostname)
     fi
   elif [ "${port}" == "8080" ]; then
     echo "# TOR LND REST"
-    host=$(sudo cat /mnt/hdd/tor/lndrest/hostname)
+    host=$(sudo cat /mnt/hdd/app-data/tor/lndrest/hostname)
     if [ "${host}" == "" ]; then
       echo "# setting up onion service ..."
       /home/admin/config.scripts/tor.onion-service.sh lndrest 8080 8080
-      host=$(sudo cat /mnt/hdd/tor/lndrest/hostname)
+      host=$(sudo cat /mnt/hdd/app-data/tor/lndrest/hostname)
     fi
   fi
   echo "# TOR --> host ${host} port ${port}"
@@ -197,8 +197,8 @@ fi
 #### RUN LNDCONNECT
 
 # generate data parts
-macaroon=$(sudo base64 /home/bitcoin/.lnd/data/chain/${network}/${chain}net/admin.macaroon | tr -d '=' | tr '/+' '_-' | tr -d '\n')
-cert=$(sudo grep -v 'CERTIFICATE' /mnt/hdd/lnd/tls.cert | tr -d '=' | tr '/+' '_-' | tr -d '\n')
+macaroon=$(sudo base64 /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon | tr -d '=' | tr '/+' '_-' | tr -d '\n')
+cert=$(sudo grep -v 'CERTIFICATE' /mnt/hdd/app-data/lnd/tls.cert | tr -d '=' | tr '/+' '_-' | tr -d '\n')
 
 # generate URI parameters
 macaroonParameter="?macaroon=${macaroon}"

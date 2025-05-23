@@ -23,6 +23,10 @@ fi
 contentWords=($2)
 contentString=$2
 
+# get progress if available
+progresstype=$(head -n 1 /var/cache/raspiblitz/temp/progress.txt 2>/dev/null)
+progress=$(tail -n 1 /var/cache/raspiblitz/temp/progress.txt 2>/dev/null)
+
 # 3rd PARAMETER (optional): Place of display - could be "lcd" or "ssh" (defalt)
 mode=$3
 if [ "${mode}" == "" ]; then
@@ -346,6 +350,42 @@ PROBLEM: SD CARD IS TOO SMALL
 Capacity of 32GB recommended
 Cut power & create fresh sd card
 " 7 40
+
+elif [ "${eventID}" == "systemcopy" ]; then
+
+    dialog --backtitle "${backtitle}" --cr-wrap --infobox "
+COPYING BOOT SYSTEM TO SSD/NVME
+Can take a while - please wait." 6 36
+
+elif [ "${eventID}" == "hdd-format" ]; then
+
+    dialog --backtitle "${backtitle}" --cr-wrap --infobox "
+PREPARING DRIVES
+" 5 20
+
+elif [ "${eventID}" == "system-change" ]; then
+
+    clear
+    echo "###############################"
+    echo "# SYSTEM REBOOT FROM SSD/NVME"
+    echo "###############################"
+    echo
+    echo "System is now restarting to boot from SSD/NVME."
+    echo "Login again after about 1 minute via SSH to continue setup."
+    echo
+    echo "Use password A for re-login:"
+    echo "ssh admin@${internet_localip}"
+    echo
+    sleep 100
+
+elif [ "${eventID}" == "hdd-migration" ]; then
+
+    dialog --backtitle "${backtitle}" --cr-wrap --infobox "
+COPYING DRIVE
+From ${contentWords[0]}
+To ${contentWords[1]}
+${progresstype}: ${progress}
+" 8 20
 
 ################################################
 # 2) GENERIC EVENT

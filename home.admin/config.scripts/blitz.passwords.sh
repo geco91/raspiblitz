@@ -15,7 +15,8 @@ fi
 # prepare hased password storage
 hashedPasswordSalt=""
 hashedPasswordStoragePath="/mnt/hdd/app-data/passwords"
-if [ $(df | grep -c "/mnt/hdd") -gt 0 ]; then
+
+if [ -L /mnt/hdd/app-data ]; then
   # check if path & salt file exists
   if [ $(sudo ls ${hashedPasswordStoragePath}/salt.txt | grep -c "salt.txt") -eq 0 ]; then
     echo "# creating salt & hashedPasswordStoragePath ..."
@@ -104,8 +105,8 @@ if [ "$1" != "set" ]; then
 fi
 
 # load raspiblitz config (if available)
-source /home/admin/raspiblitz.info
-source /mnt/hdd/raspiblitz.conf
+source /home/admin/raspiblitz.info 2>/dev/null
+source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
 if [ ${#network} -eq 0 ]; then
   network="bitcoin"
 fi
@@ -335,7 +336,7 @@ elif [ "${abcd}" = "b" ]; then
   sed -i "s/^rpcpassword=.*/rpcpassword=${newPassword}/g" /home/admin/assets/${network}.conf 2>/dev/null
 
   # change in real configs
-  sed -i "s/^rpcpassword=.*/rpcpassword=${newPassword}/g" /mnt/hdd/${network}/${network}.conf 2>/dev/null
+  sed -i "s/^rpcpassword=.*/rpcpassword=${newPassword}/g" /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null
   sed -i "s/^rpcpassword=.*/rpcpassword=${newPassword}/g" /home/admin/.${network}/${network}.conf 2>/dev/null
 
   # dont reboot - starting either services manually below or they get restarted thru
@@ -351,7 +352,7 @@ elif [ "${abcd}" = "b" ]; then
   # electrs
   if [ "${ElectRS}" == "on" ]; then
     echo "# changing the RPC password for ELECTRS"
-    RPC_USER=$(cat /mnt/hdd/bitcoin/bitcoin.conf | grep rpcuser | cut -c 9-)
+    RPC_USER=$(cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcuser | cut -c 9-)
     sudo sed -i "s/^auth = \"$RPC_USER.*\"/auth = \"$RPC_USER:${newPassword}\"/g" /home/electrs/.electrs/config.toml
     echo "# restarting electrs"
     sudo systemctl restart electrs.service

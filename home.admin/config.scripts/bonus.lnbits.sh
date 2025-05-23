@@ -3,7 +3,7 @@
 # https://github.com/lnbits/lnbits
 
 # https://github.com/lnbits/lnbits/releases
-tag="v0.12.11"
+tag="v1.0.0"
 VERSION="${tag}"
 
 # command info
@@ -27,7 +27,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
 fi
 
 echo "# Running: 'bonus.lnbits.sh $*'"
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 lnbitsDataDir="/mnt/hdd/app-data/LNBits/data"
 lnbitsConfig="${lnbitsDataDir}/.env"
@@ -460,7 +460,7 @@ if [ "$1" = "status" ]; then
     sslFingerprintIP=$(openssl x509 -in /mnt/hdd/app-data/nginx/tls.cert -fingerprint -noout 2>/dev/null | cut -d"=" -f2)
     echo "sslFingerprintIP='${sslFingerprintIP}'"
 
-    toraddress=$(sudo cat /mnt/hdd/tor/lnbits/hostname 2>/dev/null)
+    toraddress=$(sudo cat /mnt/hdd/app-data/tor/lnbits/hostname 2>/dev/null)
     echo "toraddress='${toraddress}'"
 
     sslFingerprintTOR=$(openssl x509 -in /mnt/hdd/app-data/nginx/tor_tls.cert -fingerprint -noout 2>/dev/null | cut -d"=" -f2)
@@ -577,6 +577,19 @@ if [ "$1" = "prestart" ]; then
     # set the REST endpoint (use | as separator to avoid escaping slashes)
     sed -i "s|^LND_REST_ENDPOINT=.*|LND_REST_ENDPOINT=https://127.0.0.1:${portprefix}8080|g" $lnbitsConfig
 
+    echo "# Checking if LND REST API is responding ..."
+    count=0
+    while ! curl -s -k --head --request GET "https://127.0.0.1:${portprefix}8080/v1/getinfo" > /dev/null; do
+      count=$((count + 1))
+      if [ $count -gt 600 ]; then
+        echo "# FAIL: LND REST API did not respond after 10 minutes."
+        exit 1
+      fi
+      echo "# Waiting for LND REST API... (${count}s/600s)"
+      sleep 1
+    done
+    echo "# OK: LND REST API is responding."
+
   elif [ "${LNBitsLightning}" == "cl" ]; then
 
     isUsingCL=$(cat $lnbitsConfig | grep -c "LNBITS_BACKEND_WALLET_CLASS=CLightningWallet")
@@ -584,6 +597,12 @@ if [ "$1" = "prestart" ]; then
       echo "# FAIL: ${lnbitsConfig} not set to CLN"
       exit 1
     fi
+
+    CLIGHTNING_RPC=$(grep '^CLIGHTNING_RPC=' ${lnbitsConfig} | cut -d'=' -f2-)
+    while ! lightning-cli --rpc-file=${CLIGHTNING_RPC} getinfo &> /dev/null; do
+      echo "Waiting for CLN RPC socket to become available..."
+      sleep 1
+    done
 
     echo "# everything looks OK for lnbits config on CLN on ${LNBitsChain}net"
 
@@ -955,7 +974,7 @@ EOF
   /home/admin/config.scripts/blitz.conf.sh set LNBits "on"
 
   # Hidden Service if Tor is active
-  source /mnt/hdd/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblitz.conf
   if [ "${runBehindTor}" = "on" ]; then
     # make sure to keep in sync with tor.network.sh script
     /home/admin/config.scripts/tor.onion-service.sh lnbits 80 5002 443 5003

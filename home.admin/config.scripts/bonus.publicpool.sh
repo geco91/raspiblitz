@@ -29,7 +29,7 @@ fi
 
 echo "# Running: 'bonus.${APPID}.sh $*'"
 
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 isInstalled=$(sudo ls /etc/systemd/system/${APPID}.service 2>/dev/null | grep -c "${APPID}.service")
 isRunning=$(sudo systemctl status ${APPID} 2>/dev/null | grep -c 'active (running)')
@@ -143,9 +143,13 @@ EOL
   sudo ufw allow ${PORT_STRATUM} comment "${APPID} Stratum"
   sudo ufw allow ${PORT_UI} comment "${APPID} UI"
 
+  echo "# increasing rpcworkqueue"
+  /home/admin/config.scripts/blitz.conf.sh set rpcworkqueue 512 /mnt/hdd/app-data/bitcoin/bitcoin.conf noquotes
+  /home/admin/config.scripts/blitz.conf.sh set rpcthreads 128 /mnt/hdd/app-data/bitcoin/bitcoin.conf noquotes
+
   # get RPC credentials
-  RPC_USER=$(sudo cat /mnt/hdd/bitcoin/bitcoin.conf | grep rpcuser | cut -c 9-)
-  RPC_PASS=$(sudo cat /mnt/hdd/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+  RPC_USER=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcuser | cut -c 9-)
+  RPC_PASS=$(sudo cat /mnt/hd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
 
   echo "# create .env file"
   echo "

@@ -69,36 +69,39 @@ if [ "$1" = "ramdisk" ] && [ "$2" = "on" ]; then
 
   echo "# Turn ON: RAMDISK"
 
-  if ! grep -Eq '^tmpfs.*/var/cache/raspiblitz' /etc/fstab; then
-
-    if grep -Eq '/var/cache/raspiblitz' /etc/fstab; then
-      # entry is in file but most likely just disabled -> re-enable it
-      sudo sed -i -E 's|^#(tmpfs.*/var/cache/raspiblitz.*)$|\1|g' /etc/fstab
-    else
-      # missing -> add
-      echo "" | sudo tee -a /etc/fstab >/dev/null
-      echo "tmpfs         /var/cache/raspiblitz  tmpfs  nodev,nosuid,size=32M  0  0" | sudo tee -a /etc/fstab >/dev/null
-    fi
+  # check if ramdisk is already mounted
+  isMounted=$(df -h | grep -c "/var/cache/raspiblitz")
+  if [ ${isMounted} -gt 0 ]; then
+    echo "# RAMDISK already mounted"
+    exit 0
   fi
 
-  if ! findmnt -l /var/cache/raspiblitz >/dev/null; then
-    sudo mkdir -p /var/cache/raspiblitz
-    sudo mount /var/cache/raspiblitz
-  fi
+  # make sure mountpoint exists
+  sudo mkdir -p /var/cache/raspiblitz 2>/dev/null
+  sudo rm -rf /var/cache/raspiblitz/* 2>/dev/null
 
+  # delete any old entry that contains /var/cache/raspiblitz
+  sudo sed -i '/\/var\/cache\/raspiblitz/d' /etc/fstab
 
+  # add the new entry to fstab & mounmt it
+  echo "tmpfs         /var/cache/raspiblitz  tmpfs  nodev,nosuid,size=64M,mode=0777 0 0" | sudo tee -a /etc/fstab >/dev/null
+  sudo systemctl daemon-reload
+  sudo mount -a
+  echo "# RAMDISK created and mounted"
+  
 # uninstall
 elif [ "$1" = "ramdisk" ] && [ "$2" = "off" ]; then
 
   echo "# Turn OFF: RAMDISK"
 
-  if grep -Eq '/var/cache/raspiblitz' /etc/fstab; then
-    sudo sed -i -E 's|^(tmpfs.*/var/cache/raspiblitz.*)$|#\1|g' /etc/fstab
-  fi
+  # clear content
+  sudo rm -rf /var/cache/raspiblitz/* 2>/dev/null
 
-  if findmnt -l /var/cache/raspiblitz >/dev/null; then
-    sudo umount /var/cache/raspiblitz
-  fi
+  # delete any old entry that contains /var/cache/raspiblitz
+  sudo sed -i '/\/var\/cache\/raspiblitz/d' /etc/fstab
+
+  # deactivate the mountpoint
+  sudo umount /var/cache/raspiblitz
 
 ###################
 # KEYVALUE (REDIS)

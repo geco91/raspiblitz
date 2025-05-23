@@ -16,12 +16,13 @@ if [ "${specialOption}" == "migration" ]; then
   OPTIONS+=(CONVERT "Make Node a RaspiBlitz")  
 fi
 OPTIONS+=(FROMBACKUP "Upload Migration Backup")
+OPTIONS+=(FROMHDD "Copy from HDD/SSD/NVMe")
 OPTIONS+=(SHUTDOWN "Shutdown without Changes")
 
 CHOICE_HEIGHT=$(("${#OPTIONS[@]}/2+1"))
 HEIGHT=$(($CHOICE_HEIGHT+8))
 
-CHOICE=$(dialog --clear --backtitle "RaspiBlitz ${codeVersion}-${codeRelease} - Setup" --title "⚡ Welcome to your RaspiBlitz ⚡" --menu "\nChoose how you want to setup your RaspiBlitz: \n " ${HEIGHT} 64 ${CHOICE_HEIGHT}  "${OPTIONS[@]}" 2>&1 >/dev/tty)
+CHOICE=$(dialog --clear --backtitle "RaspiBlitz ${codeVersion}-${codeRelease} - Setup" --title "⚡ Welcome to your RaspiBlitz ⚡" --menu "\nChoose how you want to setup your RaspiBlitz: \n " ${HEIGHT} 66 ${CHOICE_HEIGHT}  "${OPTIONS[@]}" 2>&1 >/dev/tty)
 
 case $CHOICE in
         FRESHSETUP)
@@ -47,6 +48,10 @@ case $CHOICE in
             # 5 --> MIGRATE
             exit 5
             ;;
+        FROMHDD)
+            # 1 --> MIGRATE FROM OLD HDD/SSD
+            exit 6
+            ;;  
         *)
             # 3 --> ESC/CANCEL = EXIT TO TERMINAL
             clear

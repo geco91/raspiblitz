@@ -2,7 +2,7 @@
 
 # set version (change if update is available)
 # https://github.com/ElementsProject/elements/releases
-VERSION="elements-23.2.1"
+VERSION="elements-23.2.7"
 SIG_PUBKEY="BD0F3062F87842410B06A0432F656B0610604482" # Pablo Greco <pgreco@blockstream.com>
 
 # command info
@@ -18,7 +18,7 @@ fi
 
 echo "# Running: bonus.elements.sh $*"
 
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 # elementslogpath
 elementslogpath="/home/elements/.elements/liquidv1/debug.log"
 
@@ -136,7 +136,7 @@ function installBinary {
 
 function removeService() {
   if [ -f "/etc/systemd/system/elementsd.service" ]; then
-    /usr/local/bin/elements-cli stop
+    elements-cli stop
     sudo systemctl stop elementsd
     sudo systemctl disable elementsd
     sudo rm /etc/systemd/system/elementsd.service 2>/dev/null
@@ -157,7 +157,7 @@ function installService() {
   echo "# Installing Elements"
   # elements.conf
   if [ ! -f /home/elements/.elements/elements.conf ]; then
-    PASSWORD_B=$(sudo cat /mnt/hdd/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
     echo "
 # Elementsd configuration
 datadir=/mnt/hdd/app-data/.elements
@@ -165,6 +165,10 @@ walletdir=/mnt/hdd/app-data/.elements/liquidv1/wallets
 rpcuser=raspiblitz
 rpcpassword=$PASSWORD_B
 rpcbind=127.0.0.1
+
+# Ensure PeerSwap compatibility
+acceptdiscountct=1
+creatediscountct=1
 
 # Bitcoin Core credentials
 mainchainrpcuser=raspibolt

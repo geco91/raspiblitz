@@ -7,7 +7,7 @@
 APPID="albyhub" # one-word lower-case no-specials
 
 # https://github.com/getAlby/hub/releases
-VERSION="1.12.0"
+VERSION="1.17.0"
 
 # port numbers the app should run on
 # delete if not an web app
@@ -66,7 +66,7 @@ fi
 echo "# Running: 'bonus.${APPID}.sh $*'"
 
 source /home/admin/raspiblitz.info
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 #########################
 # INFO
@@ -84,7 +84,7 @@ isRunning=$(systemctl status ${APPID} 2>/dev/null | grep -c 'active (running)')
 if [ "${isInstalled}" == "1" ]; then
   # gather address info (whats needed to call the app)
   localIP=$(hostname -I | awk '{print $1}')
-  toraddress=$(sudo cat /mnt/hdd/tor/${APPID}/hostname 2>/dev/null)
+  toraddress=$(sudo cat /mnt/hdd/app-data/tor/${APPID}/hostname 2>/dev/null)
   fingerprint=$(openssl x509 -in /mnt/hdd/app-data/nginx/tls.cert -fingerprint -noout | cut -d"=" -f2)
 fi
 

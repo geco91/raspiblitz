@@ -3,7 +3,7 @@
 # get raspiblitz config
 echo "get raspiblitz config"
 source /home/admin/raspiblitz.info
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 # source <(/home/admin/config.scripts/network.aliases.sh getvars <lnd|cl> <mainnet|testnet|signet>)
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $1)
@@ -21,12 +21,12 @@ OPTIONS+=(TIME "Set Timezone")
 OPTIONS+=(${network}LOG "Monitor the debug.log for ${CHAIN}")
 OPTIONS+=(${network}CONF "Edit the bitcoin.conf")
 
-if grep "^${netprefix}lnd=on" /mnt/hdd/raspiblitz.conf;then
+if grep "^${netprefix}lnd=on" /mnt/hdd/app-data/raspiblitz.conf;then
   OPTIONS+=(LNDLOG "Monitor the lnd.log for ${CHAIN}")
   OPTIONS+=(LNDCONF "Edit the lnd.conf for ${CHAIN}")
 fi
 
-if grep "^${netprefix}cl=on" /mnt/hdd/raspiblitz.conf;then
+if grep "^${netprefix}cl=on" /mnt/hdd/app-data/raspiblitz.conf;then
   OPTIONS+=(CLLOG "Monitor the CL log for ${CHAIN}")
   OPTIONS+=(CLCONF "Edit the CL config for ${CHAIN}")
 fi
@@ -81,7 +81,7 @@ case $CHOICE in
     read key
     sudo tail -n 30 -f ${bitcoinlogpath};;
   ${network}CONF)
-    if /home/admin/config.scripts/blitz.setconf.sh "/mnt/hdd/${network}/${network}.conf" "root"
+    if /home/admin/config.scripts/blitz.setconf.sh "/mnt/hdd/app-data/${network}/${network}.conf" "root"
     then
       whiptail \
         --title "Restart" --yes-button "Restart" --no-button "Not now" \
@@ -99,16 +99,16 @@ case $CHOICE in
   LNDLOG)
     clear
     echo
-    echo "Will follow the /mnt/hdd/lnd/logs/${network}/${chain}net/lnd.log"
-    echo "running 'sudo tail -n 30 -f /mnt/hdd/lnd/logs/${network}/${chain}net/lnd.log'"
+    echo "Will follow the /mnt/hdd/app-data/lnd/logs/${network}/${chain}net/lnd.log"
+    echo "running 'sudo tail -n 30 -f /mnt/hdd/app-data/lnd/logs/${network}/${chain}net/lnd.log'"
     echo
     echo "Press ENTER to continue"
     echo "use CTRL+C any time to abort .. then use the command 'raspiblitz' to return to the menu"
     echo "#######################################################################################"
     read key
-    sudo tail -n 30 -f /mnt/hdd/lnd/logs/${network}/${chain}net/lnd.log;;
+    sudo tail -n 30 -f /mnt/hdd/app-data/lnd/logs/${network}/${chain}net/lnd.log;;
   LNDCONF)
-    if /home/admin/config.scripts/blitz.setconf.sh "/mnt/hdd/lnd/${netprefix}lnd.conf" "root"
+    if /home/admin/config.scripts/blitz.setconf.sh "/mnt/hdd/app-data/lnd/${netprefix}lnd.conf" "root"
     then
       whiptail \
         --title "Restart" --yes-button "Restart" --no-button "Not now" \

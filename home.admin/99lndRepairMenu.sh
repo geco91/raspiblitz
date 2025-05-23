@@ -3,7 +3,7 @@
 # get raspiblitz config
 echo "# get raspiblitz config"
 source /home/admin/raspiblitz.info
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 source <(/home/admin/config.scripts/network.aliases.sh getvars lnd $1)
 
@@ -74,9 +74,9 @@ lndHealthCheck()
   sleep 10
 
   # Check LND health/fails (to be extended)
-  tlsExists=$(ls /mnt/hdd/lnd/tls.cert 2>/dev/null | grep -c "tls.cert")
+  tlsExists=$(ls /mnt/hdd/app-data/lnd/tls.cert 2>/dev/null | grep -c "tls.cert")
   if [ ${tlsExists} -eq 0 ]; then
-    echo "lnd-no-tls" "lnd not created TLS cert" "no /mnt/hdd/lnd/tls.cert"
+    echo "lnd-no-tls" "lnd not created TLS cert" "no /mnt/hdd/app-data/lnd/tls.cert"
     exit 9
   fi
 }
@@ -84,12 +84,12 @@ lndHealthCheck()
 syncAndCheckLND() # from _provision.setup.sh
 {
   # make sure all directories are linked
-  sudo /home/admin/config.scripts/blitz.datadrive.sh link
+  sudo /home/admin/config.scripts/blitz.data.sh link
 
   # check if now a config exists
-  configLinkedCorrectly=$(ls /home/bitcoin/.lnd/${netprefix}lnd.conf | grep -c "${netprefix}lnd.conf")
+  configLinkedCorrectly=$(ls /mnt/hdd/app-data/lnd/${netprefix}lnd.conf | grep -c "${netprefix}lnd.conf")
   if [ "${configLinkedCorrectly}" != "1" ]; then
-    echo "lnd-link-broken" "link /home/bitcoin/.lnd/${netprefix}lnd.conf broken" ""
+    echo "lnd-link-broken" "link /mnt/hdd/app-data/lnd/${netprefix}lnd.conf broken" ""
     exit 7
   fi
 
@@ -110,10 +110,10 @@ syncAndCheckLND() # from _provision.setup.sh
   sudo systemctl start ${netprefix}lnd
   echo "Starting LND Service ... executed"  
   
-  if [ $(sudo -u bitcoin ls /mnt/hdd/lnd/data/chain/bitcoin/${chain}net/wallet.db 2>/dev/null | grep -c wallet.db) -gt 0 ]; then
+  if [ $(sudo -u bitcoin ls /mnt/hdd/app-data/lnd/data/chain/bitcoin/${chain}net/wallet.db 2>/dev/null | grep -c wallet.db) -gt 0 ]; then
     echo "# OK, there is an LND wallet present"
   else
-    echo "lnd-no-wallet" "there is no LND wallet present" "/mnt/hdd/lnd/data/chain/bitcoin/${chain}net/wallet.db --> missing"
+    echo "lnd-no-wallet" "there is no LND wallet present" "/mnt/hdd/app-data/lnd/data/chain/bitcoin/${chain}net/wallet.db --> missing"
     exit 13
   fi
   # sync macaroons & TLS to other users
@@ -122,12 +122,12 @@ syncAndCheckLND() # from _provision.setup.sh
 
   # check if macaroon exists now - if not fail
   attempt=0
-  while [ $(sudo -u bitcoin ls -la /home/bitcoin/.lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | grep -c admin.macaroon) -eq 0 ]; do
+  while [ $(sudo -u bitcoin ls -la /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon 2>/dev/null | grep -c admin.macaroon) -eq 0 ]; do
     echo "Waiting 2 mins for LND to create macaroons ... (${attempt}0s)"
     sleep 10
     attempt=$((attempt+1))
     if [ $attempt -eq 12 ];then
-      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "/home/bitcoin/.lnd/data/chain/${network}/${chain}net/admin.macaroon --> missing"
+      /home/admin/config.scripts/blitz.error.sh _provision.setup.sh "lnd-no-macaroons" "lnd did not create macaroons" "/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon --> missing"
       exit 14
     fi
   done
@@ -260,7 +260,7 @@ function restoreSCB()
 #            sudo journalctl -u ${netprefix}lnd
 #            echo
 #            echo "# ${netprefix}lnd logs:"
-#            sudo tail /home/bitcoin/.lnd/logs/bitcoin/${CHAIN}/lnd.log
+#            sudo tail /mnt/hdd/app-data/lnd/logs/bitcoin/${CHAIN}/lnd.log
 #            exit 12
 #          fi
 #          sleep 10
@@ -285,15 +285,15 @@ function removeLNDwallet
   sudo systemctl stop ${netprefix}lnd
   sudo systemctl disable ${netprefix}lnd
   echo "Reset wallet on ${CHAIN}"
-  sudo rm -f /home/bitcoin/.lnd/${netprefix}lnd.conf
-  sudo rm -f /home/bitcoin/.lnd/${netprefix}v3_onion_private_key
-  sudo rm -f /mnt/hdd/lnd/data/chain/${network}/${CHAIN}/wallet.db
-  sudo rm -f /home/bitcoin/.lnd/data/graph/${CHAIN}/channel.db
-  sudo rm -f /home/bitcoin/.lnd/data/graph/${CHAIN}/sphinxreplay.db
+  sudo rm -f /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
+  sudo rm -f /mnt/hdd/app-data/lnd/${netprefix}v3_onion_private_key
+  sudo rm -f /mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/wallet.db
+  sudo rm -f /mnt/hdd/app-data/lnd/data/graph/${CHAIN}/channel.db
+  sudo rm -f /mnt/hdd/app-data/lnd/data/graph/${CHAIN}/sphinxreplay.db
   
-  sudo rm -rf /mnt/hdd/lnd/data/chain/${network}/${CHAIN}
-  sudo rm -rf /home/bitcoin/.lnd/logs/${network}/${CHAIN}
-  sudo rm -rf /home/bitcoin/.lnd/data/graph/${CHAIN}
+  sudo rm -rf /mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}
+  sudo rm -rf /mnt/hdd/app-data/lnd/logs/${network}/${CHAIN}
+  sudo rm -rf /mnt/hdd/app-data/lnd/data/graph/${CHAIN}
   sudo rm -rf home/bitcoin/.lnd/data/watchtower/${CHAIN}
 }
 
@@ -407,7 +407,7 @@ case $CHOICE in
       /home/admin/config.scripts/lnd.install.sh off signet
     fi
     echo "Reset wallet"
-    sudo rm -r /mnt/hdd/lnd
+    sudo rm -r /mnt/hdd/app-data/lnd
 
     ## from dialogLightningWallet.sh 
     # import file
@@ -507,14 +507,14 @@ case $CHOICE in
 
     echo
     echo "To show the scanning progress in the background will follow the lnd.log with:" 
-    echo "'sudo tail -n 30 -f /mnt/hdd/lnd/logs/${network}/${chain}net/lnd.log'"
+    echo "'sudo tail -n 30 -f /mnt/hdd/app-data/lnd/logs/${network}/${chain}net/lnd.log'"
     echo
     echo "Press ENTER to continue"
     echo "use CTRL+C any time to exit .. then use the command 'raspiblitz' to return to the menu"
     echo "(the rescan will continue in the background)"
     echo "#######################################################################################"
     read key
-    sudo tail -n 30 -f /mnt/hdd/lnd/logs/${network}/${chain}net/lnd.log    
+    sudo tail -n 30 -f /mnt/hdd/app-data/lnd/logs/${network}/${chain}net/lnd.log    
     ;;
 
 esac

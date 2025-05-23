@@ -2,7 +2,7 @@
 
 # TODO: later on this script will be run on build sdcard - make sure that the self-signed tls cert get created fresh on every new RaspiBlitz
 
-source /mnt/hdd/raspiblitz.conf 2>/dev/null
+source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "-help" ]; then
@@ -42,6 +42,11 @@ elif [ "$1" = "http-on" ]; then
     echo "error='nginx install failed'"
     exit 1
   fi
+
+  # make sure log dir exists
+  sudo mkdir -p /var/log/nginx 2>/dev/null
+  sudo chown root:adm /var/log/nginx 
+  sudo chmod 755 /var/log/nginx
 
   # additional config
   sudo mkdir -p /etc/systemd/system/nginx.service.d
@@ -102,6 +107,11 @@ elif [ "$1" = "https-on" ]; then
   # create nginx app-data dir
   sudo mkdir /mnt/hdd/app-data/nginx/ 2>/dev/null
 
+  # make sure log dir exists
+  sudo mkdir -p /var/log/nginx 2>/dev/null
+  sudo chown root:adm /var/log/nginx 
+  sudo chmod 755 /var/log/nginx
+
   echo "# Checking dhparam.pem ..."
   if [ ! -f /etc/ssl/certs/dhparam.pem ]; then
 
@@ -135,7 +145,7 @@ elif [ "$1" = "https-on" ]; then
   fi
 
   # make sure nginx process has permissions
-  sudo chmod 744 /mnt/hdd/lnd/tls.key
+  sudo chmod 744 /mnt/hdd/app-data/lnd/tls.key
 
   # replace public conf to - now with https version
   sudo rm /etc/nginx/sites-enabled/public.conf

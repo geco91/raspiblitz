@@ -10,7 +10,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  exit 1
 fi
 
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 if [ "$1" = "reindex" ] || [ "$1" = "reindex-chainstate" ]; then
 
@@ -40,7 +40,7 @@ if [ "$1" = "reindex" ] || [ "$1" = "reindex-chainstate" ]; then
 
   # starting reindex
   echo "# starting ${network} service with -${action} flag"
-  sudo -u bitcoin /usr/local/bin/${network}d ${netparam}-daemon -blockfilterindex=0 -${action} -conf=/mnt/hdd/${network}/${network}.conf -datadir=/mnt/hdd/${network} 1>&2
+  sudo -u bitcoin /usr/local/bin/${network}d ${netparam}-daemon -blockfilterindex=0 -${action} -conf=/mnt/hdd/app-data/${network}/${network}.conf -datadir=/mnt/hdd/app-storage/${network} 1>&2
   echo "# waiting 10 secs"
   sleep 10
   echo "# going into reboot - reindex process can be monitored like normal blockchain sync status"

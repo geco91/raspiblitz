@@ -7,39 +7,23 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # LOGFILE - store debug logs of bootstrap
-logFile="/home/admin/raspiblitz.provision-update.log"
+logFile="/home/admin/raspiblitz.log"
 
 # INFOFILE - state data from bootstrap
 infoFile="/home/admin/raspiblitz.info"
 
 # CONFIGFILE - configuration of RaspiBlitz
-configFile="/mnt/hdd/raspiblitz.conf"
+configFile="/mnt/hdd/app-data/raspiblitz.conf"
 
 # SETUPFILE - - setup data of RaspiBlitz
 setupFile="/var/cache/raspiblitz/temp/raspiblitz.setup"
 source ${setupFile}
 
 # log header
-echo "" > ${logFile}
-sudo chmod 640 ${logFile}
-chown root:sudo ${logFile}
 echo "###################################" >> ${logFile}
 echo "# _provision.update.sh" >> ${logFile}
 echo "###################################" >> ${logFile}
 /home/admin/_cache.sh set message "Running Data Update"
-
-# HDD BTRFS RAID REPAIR IF NEEDED
-source <(sudo /home/admin/config.scripts/blitz.datadrive.sh status)
-if [ ${isBTRFS} -eq 1 ] && [ ${isMounted} -eq 1 ]; then
-  echo "CHECK BTRFS RAID"  >> ${logFile}
-  if [ ${isRaid} -eq 1 ] && [ ${#raidUsbDev} -eq 0 ]; then
-      echo "HDD was set to work in RAID, but RAID drive is not connected"  >> ${logFile}
-      echo "Trying to set HDD back to single mode."  >> ${logFile}
-      sudo /home/admin/config.scripts/blitz.datadrive.sh raid off >> ${logFile}
-  else
-      echo "OK"  >> ${logFile}
-  fi
-fi
 
 # LOAD DATA & PRECHECK
 
@@ -88,7 +72,7 @@ echo "prechecks OK"  >> ${logFile}
 # a conversion of config data or app data is needed
 
 # if old bitcoin.conf exists ...
-configExists=$(sudo ls /mnt/hdd/bitcoin/bitcoin.conf | grep -c '.conf')
+configExists=$(sudo ls /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep -c '.conf')
 if [ ${configExists} -eq 1 ]; then
   echo "Checking old bitcoin.conf ..." >> ${logFile}
 
@@ -96,64 +80,64 @@ if [ ${configExists} -eq 1 ]; then
   # https://github.com/rootzoll/raspiblitz/issues/217
   # https://github.com/rootzoll/raspiblitz/issues/950
 
-  if ! grep -Eq "^rpcallowip=.*" /mnt/hdd/${network}/${network}.conf; then
+  if ! grep -Eq "^rpcallowip=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
     echo "fix issue #217 -> adding rpcallowip=127.0.0.1" >> ${logFile}
-    echo "rpcallowip=127.0.0.1" >> /mnt/hdd/${network}/${network}.conf
+    echo "rpcallowip=127.0.0.1" >> /mnt/hdd/app-data/${network}/${network}.conf
   else
     echo "check issue #217 -> ok rpcallow exists" >> ${logFile}
   fi
 
   # check whether "main." needs to be added to rpcport and rpcbind
-  if grep -Eq "^rpcport=.*" /mnt/hdd/${network}/${network}.conf; then
+  if grep -Eq "^rpcport=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
     echo "fix issue #950 -> change rpcport to main.rpcport" >> ${logFile}
-    sudo sed -i -E 's/^(rpcport=.*)/main.\1/g' /mnt/hdd/${network}/${network}.conf
+    sudo sed -i -E 's/^(rpcport=.*)/main.\1/g' /mnt/hdd/app-data/${network}/${network}.conf
   else
     echo "check issue #950 -> ok ^rpcport does not exist" >> ${logFile}
   fi
 
-  if grep -Eq "^rpcbind=.*" /mnt/hdd/${network}/${network}.conf; then
+  if grep -Eq "^rpcbind=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
     echo "fix issue #950 -> change rpcbind to main.rpcbind" >> ${logFile}
-    sudo sed -i -E 's/^(rpcbind=.*)/main.\1/g' /mnt/hdd/${network}/${network}.conf
+    sudo sed -i -E 's/^(rpcbind=.*)/main.\1/g' /mnt/hdd/app-data/${network}/${network}.conf
   else
     echo "check issue #950 -> ok ^rpcbind does not exist" >> ${logFile}
   fi
 
   # check whether right settings are there ("main.")
-  if ! grep -Eq "^main.rpcport=.*" /mnt/hdd/${network}/${network}.conf; then
+  if ! grep -Eq "^main.rpcport=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
     echo "fix issue #217 -> adding main.rpcport=8332" >> ${logFile}
-    echo "main.rpcport=8332" >> /mnt/hdd/${network}/${network}.conf
+    echo "main.rpcport=8332" >> /mnt/hdd/app-data/${network}/${network}.conf
   else
     echo "check issue #217 -> ok main.rpcport exists" >> ${logFile}
   fi
 
-  if ! grep -Eq "^main.rpcbind=.*" /mnt/hdd/${network}/${network}.conf; then
+  if ! grep -Eq "^main.rpcbind=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
     echo "fix issue #217 -> adding main.rpcbind=127.0.0.1:8332" >> ${logFile}
-    echo "main.rpcbind=127.0.0.1:8332" >> /mnt/hdd/${network}/${network}.conf
+    echo "main.rpcbind=127.0.0.1:8332" >> /mnt/hdd/app-data/${network}/${network}.conf
   else
     echo "check issue #217 -> ok main.rpcbind exists" >> ${logFile}
   fi
 
   # same for testnet
-  if ! grep -Eq "^test.rpcport=.*" /mnt/hdd/${network}/${network}.conf; then
+  if ! grep -Eq "^test.rpcport=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
     echo "fix issue #950 -> adding test.rpcport=18332" >> ${logFile}
-    echo "test.rpcport=18332" >> /mnt/hdd/${network}/${network}.conf
+    echo "test.rpcport=18332" >> /mnt/hdd/app-data/${network}/${network}.conf
   else
     echo "check issue #950 -> ok test.rpcport exists" >> ${logFile}
   fi
 
-  if ! grep -Eq "^test.rpcbind=.*" /mnt/hdd/${network}/${network}.conf; then
+  if ! grep -Eq "^test.rpcbind=.*" /mnt/hdd/app-data/${network}/${network}.conf; then
     echo "fix issue #950 -> adding test.rpcbind=127.0.0.1:18332" >> ${logFile}
-    echo "test.rpcbind=127.0.0.1:18332" >> /mnt/hdd/${network}/${network}.conf
+    echo "test.rpcbind=127.0.0.1:18332" >> /mnt/hdd/app-data/${network}/${network}.conf
   else
     echo "check issue #950 -> ok test.rpcbind exists" >> ${logFile}
   fi
 
 else
-  echo "WARN: /mnt/hdd/bitcoin/bitcoin.conf not found" >> ${logFile}
+  echo "WARN: /mnt/hdd/app-data/bitcoin/bitcoin.conf not found" >> ${logFile}
 fi
 
 # delete old Tor v1 addresses from config -  see: https://github.com/rootzoll/raspiblitz/issues/3659
-sed -i -E "/^addnode=[a-z0-9]{8,18}\.onion/d" /mnt/hdd/${network}/${network}.conf 2>/dev/null
+sed -i -E "/^addnode=[a-z0-9]{8,18}\.onion/d" /mnt/hdd/app-data/${network}/${network}.conf 2>/dev/null
 
 echo "Version Code: ${codeVersion}" >> ${logFile}
 echo "Version Data: ${raspiBlitzVersion}" >> ${logFile}
@@ -172,7 +156,7 @@ echo ""
 echo "*** Start ${network} (UPDATE) ***" >> ${logFile}
 /home/admin/_cache.sh set message "Blockchain Testrun"
 echo "- This can take a while .." >> ${logFile}
-chown -R bitcoin:bitcoin /mnt/hdd/${network} >>${logFile} 2>&1
+chown -R bitcoin:bitcoin /mnt/hdd/app-storage/${network} >>${logFile} 2>&1
 systemctl daemon-reload >> ${logFile}
 systemctl enable ${network}d.service >> ${logFile}
 systemctl start ${network}d.service >> ${logFile}
@@ -184,65 +168,65 @@ if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
   cp /home/admin/assets/lnd.service /etc/systemd/system/lnd.service >> ${logFile} 2>&1
 
   # if old lnd.conf exists ...
-  configExists=$(sudo ls /mnt/hdd/lnd/lnd.conf | grep -c '.conf')
+  configExists=$(sudo ls /mnt/hdd/app-data/lnd/lnd.conf | grep -c '.conf')
   if [ ${configExists} -eq 1 ]; then
 
     # make sure correct file permisions are set
-    chown bitcoin:bitcoin /mnt/hdd/lnd/lnd.conf
-    chmod 664 /mnt/hdd/lnd/lnd.conf
+    chown bitcoin:bitcoin /mnt/hdd/app-data/lnd/lnd.conf
+    chmod 664 /mnt/hdd/app-data/lnd/lnd.conf
 
     # make sure additional values are added to [Application Options] since v1.7
     echo "- lnd.conf --> checking additional [Application Options] since v1.7" >> ${logFile}
-    applicationOptionsLineNumber=$(grep -n "\[Application Options\]" /mnt/hdd/lnd/lnd.conf | cut -d ":" -f1)
+    applicationOptionsLineNumber=$(grep -n "\[Application Options\]" /mnt/hdd/app-data/lnd/lnd.conf | cut -d ":" -f1)
     if [ "${applicationOptionsLineNumber}" != "" ]; then
       applicationOptionsLineNumber="$(($applicationOptionsLineNumber+1))"
 
       # Avoid historical graph data sync
       # ignore-historical-gossip-filters=1
-      configParamExists=$(grep -c "^ignore-historical-gossip-filters=" /mnt/hdd/lnd/lnd.conf)
+      configParamExists=$(grep -c "^ignore-historical-gossip-filters=" /mnt/hdd/app-data/lnd/lnd.conf)
       if [ "${configParamExists}" == "0" ]; then
         echo " - ADDING 'ignore-historical-gossip-filters'" >> ${logFile}
-        sed -i "${applicationOptionsLineNumber}iignore-historical-gossip-filters=1" /mnt/hdd/lnd/lnd.conf
+        sed -i "${applicationOptionsLineNumber}iignore-historical-gossip-filters=1" /mnt/hdd/app-data/lnd/lnd.conf
       else
         echo " - OK 'ignore-historical-gossip-filters' exists (${configParamExists})" >> ${logFile}
       fi
 
       # Avoid slow startup time
       # sync-freelist=1
-      configParamExists=$(grep -c "^sync-freelist=" /mnt/hdd/lnd/lnd.conf)
+      configParamExists=$(grep -c "^sync-freelist=" /mnt/hdd/app-data/lnd/lnd.conf)
       if [ "${configParamExists}" == "0" ]; then
         echo " - ADDING 'sync-freelist'" >> ${logFile}
-        sed -i "${applicationOptionsLineNumber}isync-freelist=1" /mnt/hdd/lnd/lnd.conf
+        sed -i "${applicationOptionsLineNumber}isync-freelist=1" /mnt/hdd/app-data/lnd/lnd.conf
       else
         echo " - OK 'sync-freelist' exists (${configParamExists})" >> ${logFile}
       fi
 
       # Avoid high startup overhead
       # stagger-initial-reconnect=1
-      configParamExists=$(grep -c "^stagger-initial-reconnect=" /mnt/hdd/lnd/lnd.conf)
+      configParamExists=$(grep -c "^stagger-initial-reconnect=" /mnt/hdd/app-data/lnd/lnd.conf)
       if [ "${configParamExists}" == "0" ]; then
         echo " - ADDING 'stagger-initial-reconnect'" >> ${logFile}
-        sed -i "${applicationOptionsLineNumber}istagger-initial-reconnect=1" /mnt/hdd/lnd/lnd.conf
+        sed -i "${applicationOptionsLineNumber}istagger-initial-reconnect=1" /mnt/hdd/app-data/lnd/lnd.conf
       else
         echo " - OK 'stagger-initial-reconnect' exists (${configParamExists})" >> ${logFile}
       fi
 
       # Delete and recreate RPC TLS certificate when details change or cert expires
       # tlsautorefresh=1
-      configParamExists=$(grep -c "^tlsautorefresh=" /mnt/hdd/lnd/lnd.conf)
+      configParamExists=$(grep -c "^tlsautorefresh=" /mnt/hdd/app-data/lnd/lnd.conf)
       if [ "${configParamExists}" == "0" ]; then
         echo " - ADDING 'tlsautorefresh'" >> ${logFile}
-        sed -i "${applicationOptionsLineNumber}itlsautorefresh=1" /mnt/hdd/lnd/lnd.conf
+        sed -i "${applicationOptionsLineNumber}itlsautorefresh=1" /mnt/hdd/app-data/lnd/lnd.conf
       else
         echo " - OK 'tlsautorefresh' exists (${configParamExists})" >> ${logFile}
       fi
 
       # Do not include IPs in the RPC TLS certificate
       # tlsdisableautofill=1
-      configParamExists=$(grep -c "^tlsdisableautofill=" /mnt/hdd/lnd/lnd.conf)
+      configParamExists=$(grep -c "^tlsdisableautofill=" /mnt/hdd/app-data/lnd/lnd.conf)
       if [ "${configParamExists}" == "0" ]; then
         echo " - ADDING 'tlsdisableautofill'" >> ${logFile}
-        sed -i "${applicationOptionsLineNumber}itlsdisableautofill=1" /mnt/hdd/lnd/lnd.conf
+        sed -i "${applicationOptionsLineNumber}itlsdisableautofill=1" /mnt/hdd/app-data/lnd/lnd.conf
       else
         echo " - OK 'tlsdisableautofill' exists (${configParamExists})" >> ${logFile}
       fi
@@ -251,7 +235,7 @@ if [ "${lightning}" == "lnd" ] || [ "${lnd}" == "on" ]; then
       echo " - WARN: section '[Application Options]' not found in lnd.conf" >> ${logFile}
     fi
   else
-    echo "WARN: /mnt/hdd/lnd/lnd.conf not found" >> ${logFile}
+    echo "WARN: /mnt/hdd/app-data/lnd/lnd.conf not found" >> ${logFile}
   fi
 
   # start LND service

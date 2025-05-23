@@ -8,7 +8,7 @@ if [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
 fi
 
 # load data from config
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 if [ $# -gt 1 ];  then
   CHAIN=$2
@@ -28,10 +28,8 @@ function copy_mac_set_perms() {
   local group_name=${2} # the unix group name (e.g. lndadmin)
   local n=${3:-bitcoin} # the network (e.g. bitcoin) defaults to bitcoin
   local c=${4:-main}    # the chain (e.g. main, test, sim, reg) defaults to main (for mainnet)
-
-  sudo /bin/cp /mnt/hdd/lnd/data/chain/"${n}"/"${c}"net/"${file_name}" /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${file_name}"
   sudo /bin/chown --silent admin:"${group_name}" /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${file_name}"
-  sudo /bin/chmod --silent 640 /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${file_name}"
+  sudo /bin/chmod --silent 750 /mnt/hdd/app-data/lnd/data/chain/"${n}"/"${c}"net/"${file_name}"
 }
 
 function check_macaroons() {
@@ -88,9 +86,9 @@ if [ "$1" = "reset" ]; then
     cd || exit
     # shellcheck disable=SC2154 # gets the ${network} from the raspiblitz.conf
     sudo find /mnt/hdd/app-data/lnd/data/chain/"${network}"/"${chain}"net/ -iname '*.macaroon' -delete
-    sudo find /home/bitcoin/.lnd/data/chain/"${network}"/"${chain}"net/ -iname '*.macaroon' -delete
+    sudo find /mnt/hdd/app-data/lnd/data/chain/"${network}"/"${chain}"net/ -iname '*.macaroon' -delete
     if [ "${keepOldMacaroons}" != "1" ]; then
-      sudo rm /home/bitcoin/.lnd/data/chain/"${network}"/"${chain}"net/macaroons.db
+      sudo rm /mnt/hdd/app-data/lnd/data/chain/"${network}"/"${chain}"net/macaroons.db
     fi
 
     echo "# delete also lit macaroons if present"
@@ -157,27 +155,8 @@ elif [ "$1" = "sync" ]; then
   copy_mac_set_perms walletkit.macaroon lndwalletkit "${network}" "${chain}"
   copy_mac_set_perms router.macaroon lndrouter "${network}" "${chain}"
 
-  echo "# make sure admin has a symlink at ~/.lnd to /mnt/hdd/app-data/lnd/"
-  if ! [[ -L "/home/admin/.lnd" ]]; then
-    sudo rm -rf "/home/admin/.lnd"                # not a symlink.. delete it silently
-    ln -s /mnt/hdd/app-data/lnd/ /home/admin/.lnd # and create symlink
-  fi
-
-  echo "# make sure LND conf is readable and symlinked"
-  sudo chmod 644 "/mnt/hdd/lnd/${netprefix}lnd.conf"
-  sudo chown bitcoin:bitcoin "/mnt/hdd/lnd/${netprefix}lnd.conf"
-  if ! [[ -L "/mnt/hdd/app-data/lnd/${netprefix}lnd.conf" ]]; then
-    sudo rm -rf "/mnt/hdd/app-data/lnd/${netprefix}lnd.conf"                # not a symlink.. delete it silently
-    sudo ln -s "/mnt/hdd/lnd/${netprefix}lnd.conf" "/mnt/hdd/app-data/lnd/${netprefix}lnd.conf"  # and create symlink
-  fi
-
-  echo "# make sure TLS certificate is readable and symlinked"
-  sudo chmod 644 "/mnt/hdd/lnd/tls.cert"
-  sudo chown bitcoin:bitcoin "/mnt/hdd/lnd/tls.cert"
-  if ! [[ -L "/mnt/hdd/app-data/lnd/tls.cert" ]]; then
-    sudo rm -rf "/mnt/hdd/app-data/lnd/tls.cert"                    # not a symlink.. delete it silently
-    sudo ln -s "/mnt/hdd/lnd/tls.cert" "/mnt/hdd/app-data/lnd/tls.cert"  # and create symlink
-  fi
+  sudo usermod -aG lndadmin admin
+  sudo usermod -aG bitcoin admin
   
 ###########################
 # Check Macaroons and fix missing

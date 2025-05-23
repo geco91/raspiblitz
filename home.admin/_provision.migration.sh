@@ -7,7 +7,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # LOGFILE - store debug logs of bootstrap
-logFile="/home/admin/raspiblitz.provision-migration.log"
+logFile="/home/admin/raspiblitz.log"
 
 # INFOFILE - state data from bootstrap
 infoFile="/home/admin/raspiblitz.info"
@@ -20,9 +20,6 @@ source /var/cache/raspiblitz/temp/raspiblitz.setup
 source <(/home/admin/_cache.sh get hddGotMigrationData hddVersionLND)
 
 # log header
-echo "" > ${logFile}
-chmod 640 ${logFile}
-chown root:sudo ${logFile}
 echo "###################################" >> ${logFile}
 echo "# _provision.migration.sh" >> ${logFile}
 echo "###################################" >> ${logFile}
@@ -46,9 +43,9 @@ if [ "$?" != "0" ]; then
 fi
 
 # make sure a raspiblitz.conf exists after migration
-confExists=$(ls /mnt/hdd/raspiblitz.conf 2>/dev/null | grep -c "raspiblitz.conf")
+confExists=$(ls /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null | grep -c "raspiblitz.conf")
 if [ "${confExists}" != "1" ]; then
-    /home/admin/config.scripts/blitz.error.sh _provision.migration.sh "missing-config" "no /mnt/hdd/raspiblitz.conf" "After runningn migration process - no raspiblitz.conf abvailable." ${logFile}
+    /home/admin/config.scripts/blitz.error.sh _provision.migration.sh "missing-config" "no /mnt/hdd/app-data/raspiblitz.conf" "After runningn migration process - no raspiblitz.conf abvailable." ${logFile}
     exit 6
 fi
 

@@ -19,15 +19,8 @@ echo "# Running: bitcoin.update.sh $*"
 # 1. parameter [info|tested|reckless]
 mode="$1"
 
-#4792 QUICK FIX --> downgrade reckless to tested
-# TODO: Remove with RaspiBlitz v1.12.0
-if [ "${mode}" = "reckless" ]; then
-  echo "# WARN: reckless mode is temp deactivated - switching to tested"
-  mode="tested"
-fi
-
 # RECOMMENDED UPDATE BY RASPIBLITZ TEAM (latest tested version available)
-bitcoinVersion="27.1" # example: 22.0 .. keep empty if no newer version as sd card build is available
+bitcoinVersion="" # example: 22.0 .. keep empty if no newer version as sd card build is available
 
 # GATHER DATA
 # setting download directory to the current user
@@ -240,7 +233,7 @@ if [ "${mode}" = "tested" ] || [ "${mode}" = "reckless" ] || [ "${mode}" = "cust
       echo "# BUILD FAILED --> the PGP verification failed"
       echo "# try again or with a different version"
       echo "# if you want to skip verifying all signatures (and just show them) use the command:"
-      echo "# /home/admin/config.scripts/bonus.bitcoin.sh custom ${bitcoinVersion:-<version>} skipverify"
+      echo "# /home/admin/config.scripts/bitcoin.update.sh custom ${bitcoinVersion:-<version>} skipverify"
       exit 1
     fi
   fi
@@ -288,7 +281,7 @@ if [ "${mode}" = "tested" ] || [ "${mode}" = "reckless" ] || [ "${mode}" = "cust
   tar -xvf ${binaryName}
   sudo install -m 0755 -o root -g root -t /usr/local/bin/ bitcoin-${bitcoinVersion}/bin/*
   sleep 3
-  if ! sudo /usr/local/bin/bitcoind --version | grep "${bitcoinVersion}"; then
+  if ! sudo -u bitcoin /usr/local/bin/bitcoind --version | grep "${bitcoinVersion}"; then
     echo
     echo "# BUILD FAILED --> Was not able to install bitcoind version(${bitcoinVersion})"
     exit 1

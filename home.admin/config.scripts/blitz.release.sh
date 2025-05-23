@@ -15,7 +15,8 @@ echo "# raspi_bootdir(${raspi_bootdir})"
 
 # write release info to to version file
 echo "writing codeRelease commit ro version file:"
-releaseCommit=$(git -C /home/admin/raspiblitz rev-parse --short HEAD)
+fullShortCommit=$(git -C /home/admin/raspiblitz rev-parse --short HEAD)
+releaseCommit=${fullShortCommit:0:4}
 sed -i "s/^codeRelease=\".*\"/codeRelease=\"${releaseCommit}\"/" /home/admin/_version.info
 cat /home/admin/_version.info
 echo
@@ -27,6 +28,7 @@ sudo systemctl stop background.scan.service
 # remove stop flag (if exists)
 echo "deleting stop flag .."
 sudo rm ${raspi_bootdir}/stop 2>/dev/null
+sudo rm /home/admin/stop 2>/dev/null
 
 # cleaning logs
 echo "deleting raspiblitz & system logs .."
@@ -73,9 +75,6 @@ echo "reset DNS confs ..."
 echo -e "nameserver 1.1.1.1\nnameserver 84.200.69.80" | sudo tee /etc/resolv.conf > /dev/null
 echo "OK"
 
-# make sure Tor respo signing keys are uptodate #4648
-wget -qO- https://deb.torproject.org/torproject.org/A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/torproject.gpg >/dev/null
-
 # update system (only security updates with minimal risk of breaking changes)
 if [ "$1" != "-quick" ]; then
   echo
@@ -97,15 +96,6 @@ sudo systemctl stop ssh
 sudo systemctl disable ssh
 sudo rm /etc/ssh/ssh_host_*
 echo "OK"
-
-# force locale - see #4861
-# next major release should make sure to be set during sd build card
-echo
-echo "Forcing locales ..."
-sudo sed -i '/^en_US.UTF-8/s/^#//' /etc/locale.gen
-sudo sed -i '/^en_GB.UTF-8/s/^/#/' /etc/locale.gen
-sudo locale-gen
-echo -e "LANG=en_US.UTF-8\nLANGUAGE=en_US.UTF-8\nLC_ALL=en_US.UTF-8" | sudo tee /etc/default/locale > /dev/null
 
 # make sure file system is clean and ready for release
 echo

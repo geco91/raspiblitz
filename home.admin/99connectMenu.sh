@@ -3,7 +3,7 @@
 # get raspiblitz config
 echo "get raspiblitz config"
 source /home/admin/raspiblitz.info
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 source <(/home/admin/_cache.sh get internet_localip internet_localiprange)
 localIP="${internet_localip}"
@@ -88,11 +88,11 @@ case $CHOICE in
 
   BISQ)
     OPTIONS=()
-    if [ $(grep -c "peerbloomfilters=1" < /mnt/hdd/bitcoin/bitcoin.conf) -eq 0 ]||\
+    if [ $(grep -c "peerbloomfilters=1" < /mnt/hdd/app-data/bitcoin/bitcoin.conf) -eq 0 ]||\
     [ $(grep -c Bisq < /etc/tor/torrc) -eq 0 ];then
       OPTIONS+=(ADDBISQ "Add a Hidden Service for Bisq")
     fi
-    if [ $(grep -c "peerbloomfilters=1" < /mnt/hdd/bitcoin/bitcoin.conf) -gt 0 ]&&\
+    if [ $(grep -c "peerbloomfilters=1" < /mnt/hdd/app-data/bitcoin/bitcoin.conf) -gt 0 ]&&\
     [ $(grep -c Bisq < /etc/tor/torrc) -gt 0 ];then
       OPTIONS+=(SHOWBISQ "Show the Hidden Service to connect Bisq")
       OPTIONS+=(REMOVEBISQ "Remove the Hidden Service for Bisq")
@@ -110,9 +110,9 @@ case $CHOICE in
       case $CHOICE in
         ADDBISQ)
           clear
-          if [ $(grep -c "peerbloomfilters=1" < /mnt/hdd/bitcoin/bitcoin.conf) -eq 0 ]
+          if [ $(grep -c "peerbloomfilters=1" < /mnt/hdd/app-data/bitcoin/bitcoin.conf) -eq 0 ]
           then
-            echo "peerbloomfilters=1" | sudo tee -a /mnt/hdd/bitcoin/bitcoin.conf
+            echo "peerbloomfilters=1" | sudo tee -a /mnt/hdd/app-data/bitcoin/bitcoin.conf
             echo "# Restarting bitcoind"
             sudo systemctl restart bitcoind
           else
@@ -123,17 +123,17 @@ case $CHOICE in
             echo "# Creating the Hidden Service for Bisq"
             echo "
 # Hidden Service for Bisq (bitcoin P2P v3)
-HiddenServiceDir /mnt/hdd/tor/bisq
+HiddenServiceDir /mnt/hdd/app-data/tor/bisq
 HiddenServiceVersion 3
 HiddenServicePort 8333 127.0.0.1:8333" | sudo tee -a /etc/tor/torrc
             echo "# Reloading Tor"
             sudo systemctl reload tor@default
             sleep 10
-            TOR_ADDRESS=$(sudo cat /mnt/hdd/tor/bisq/hostname)
+            TOR_ADDRESS=$(sudo cat /mnt/hdd/app-data/tor/bisq/hostname)
               if [ -z "$TOR_ADDRESS" ]; then
                 echo "Waiting for the Hidden Service"
                 sleep 10
-                TOR_ADDRESS=$(sudo cat /mnt/hdd/tor/bisq/hostname)
+                TOR_ADDRESS=$(sudo cat /mnt/hdd/app-data/tor/bisq/hostname)
                 if [ -z "$TOR_ADDRESS" ]; then
                   echo "# FAIL - The Hidden Service address could not be found - Tor error?"
                   exit 1
@@ -157,7 +157,7 @@ HiddenServicePort 8333 127.0.0.1:8333" | sudo tee -a /etc/tor/torrc
           sudo systemctl reload tor@default;;
         SHOWBISQ)
           clear
-          TOR_ADDRESS=$(sudo cat /mnt/hdd/tor/bisq/hostname)
+          TOR_ADDRESS=$(sudo cat /mnt/hdd/app-data/tor/bisq/hostname)
           echo
           echo "Install from https://bisq.network/downloads/"
           echo "Go to Bisq Settings -> Network Info -> 'Custom Bitcoin Node'."
@@ -182,14 +182,14 @@ HiddenServicePort 8333 127.0.0.1:8333" | sudo tee -a /etc/tor/torrc
     fi
     echo "# Running on ${chain:-main}net"
     echo
-    allowIPrange=$(grep -c "rpcallowip=$localIPrange" <  /mnt/hdd/${network}/${network}.conf)
-    bindIP=$(grep -c "${chain:-main}.rpcbind=$localIP" <  /mnt/hdd/${network}/${network}.conf)
+    allowIPrange=$(grep -c "rpcallowip=$localIPrange" <  /mnt/hdd/app-data/${network}/${network}.conf)
+    bindIP=$(grep -c "${chain:-main}.rpcbind=$localIP" <  /mnt/hdd/app-data/${network}/${network}.conf)
     rpcTorService=$(grep -c "HiddenServicePort ${BITCOINRPCPORT} 127.0.0.1:${BITCOINRPCPORT}"  < /etc/tor/torrc)
-    TorRPCaddress=$(sudo cat /mnt/hdd/tor/bitcoin${BITCOINRPCPORT}/hostname)
+    TorRPCaddress=$(sudo cat /mnt/hdd/app-data/tor/bitcoin${BITCOINRPCPORT}/hostname)
 
     function showRPCcredentials() {
-      RPCUSER=$(sudo cat /mnt/hdd/${network}/${network}.conf | grep rpcuser | cut -c 9-)
-      RPCPSW=$(sudo cat /mnt/hdd/${network}/${network}.conf | grep rpcpassword | cut -c 13-)
+      RPCUSER=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcuser | cut -c 9-)
+      RPCPSW=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcpassword | cut -c 13-)
       echo
       echo "RPC username:"
       echo "$RPCUSER"
@@ -247,11 +247,11 @@ HiddenServicePort 8333 127.0.0.1:8333" | sudo tee -a /etc/tor/torrc
 
         restartCore=0
         if [ $allowIPrange -eq 0 ]; then
-          echo "rpcallowip=$localIPrange" | sudo tee -a /mnt/hdd/${network}/${network}.conf
+          echo "rpcallowip=$localIPrange" | sudo tee -a /mnt/hdd/app-data/${network}/${network}.conf
           restartCore=1
         fi
         if [ $bindIP -eq 0 ]; then
-          echo "${chain}.rpcbind=$localIP" | sudo tee -a /mnt/hdd/${network}/${network}.conf
+          echo "${chain}.rpcbind=$localIP" | sudo tee -a /mnt/hdd/app-data/${network}/${network}.conf
           restartCore=1
         fi
         if [ $restartCore = 1 ];then
@@ -294,11 +294,11 @@ HiddenServicePort 8333 127.0.0.1:8333" | sudo tee -a /etc/tor/torrc
         sudo ufw deny from $localIPrange to any port ${BITCOINRPCPORT}
         restartCore=0
         if [ $allowIPrange -gt 0 ]; then
-          sudo sed -i "/^rpcallowip=.*/d" /mnt/hdd/${network}/${network}.conf
+          sudo sed -i "/^rpcallowip=.*/d" /mnt/hdd/app-data/${network}/${network}.conf
           restartCore=1
         fi
         if [ $bindIP -gt 0 ]; then
-          sudo sed -i "/^${chain}.rpcbind=$localIP/d" /mnt/hdd/${network}/${network}.conf
+          sudo sed -i "/^${chain}.rpcbind=$localIP/d" /mnt/hdd/app-data/${network}/${network}.conf
           restartCore=1
         fi
         if [ $restartCore = 1 ];then

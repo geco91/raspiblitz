@@ -37,7 +37,7 @@ fi
 echo "# Running: 'bonus.${APPID}.sh $*'"
 
 # check & load raspiblitz config
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 if [ -f "${LABELBASE_HOME}/exports.sh" ]; then
   echo "INFO: The file '${LABELBASE_HOME}/exports.sh' already exists."
@@ -64,7 +64,7 @@ if [ "${isInstalled}" == "1" ]; then
 
   # gather address info (whats needed to call the app)
   localIP=$(hostname -I | awk '{print $1}')
-  toraddress=$(sudo cat /mnt/hdd/tor/${APPID}/hostname 2>/dev/null)
+  toraddress=$(sudo cat /mnt/hdd/app-data/tor/${APPID}/hostname 2>/dev/null)
   fingerprint=$(openssl x509 -in /mnt/hdd/app-data/nginx/tls.cert -fingerprint -noout | cut -d"=" -f2)
 
 fi

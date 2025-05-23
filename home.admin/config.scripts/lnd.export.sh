@@ -52,7 +52,7 @@ fi
 
 # load data from config
 source /home/admin/raspiblitz.info
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 ########################
 # CANCEL
@@ -67,10 +67,10 @@ if [ ${#exportType} -eq 0 ]; then
 ########################
 elif [ "${exportType}" = "hexstring" ]; then
 
-  adminMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/lnd/data/chain/${network}/${chain}net/admin.macaroon)
-  invoiceMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/lnd/data/chain/${network}/${chain}net/invoice.macaroon)
-  readonlyMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/lnd/data/chain/${network}/${chain}net/readonly.macaroon)
-  restTor=$(sudo cat /mnt/hdd/tor/lndrest/hostname)
+  adminMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon)
+  invoiceMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/invoice.macaroon)
+  readonlyMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/readonly.macaroon)
+  restTor=$(sudo cat /mnt/hdd/app-data/tor/lndrest/hostname)
 
   clear
   echo "###### HEXSTRING EXPORT ######"
@@ -80,10 +80,10 @@ elif [ "${exportType}" = "hexstring" ]; then
   echo ""
   echo "invoiceMacaroon=${invoiceMacaroon}"
   echo ""
-  readonlyMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/lnd/data/chain/${network}/${chain}net/readonly.macaroon)
+  readonlyMacaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/readonly.macaroon)
   echo "readonlyMacaroon=${readonlyMacaroon}"
   echo ""
-  tlsCert=$(sudo xxd -ps -u -c 1000 /mnt/hdd/lnd/tls.cert)
+  tlsCert=$(sudo xxd -ps -u -c 1000 /mnt/hdd/app-data/lnd/tls.cert)
   echo "tlsCert=${tlsCert}"
   echo ""
 
@@ -112,10 +112,10 @@ elif [ "${exportType}" = "btcpay" ]; then
   macaroon=$(sudo -u admin lncli bakemacaroon address:read address:write info:read invoices:read invoices:write onchain:read)
 
   # old: admin macaroon (remove after v1.6.3 release)
-  #macaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/lnd/data/chain/${network}/${chain}net/admin.macaroon)
+  #macaroon=$(sudo xxd -ps -u -c 1000 /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon)
 
   # get certificate thumb
-  certthumb=$(sudo openssl x509 -noout -fingerprint -sha256 -inform pem -in /mnt/hdd/lnd/tls.cert | cut -d "=" -f 2)
+  certthumb=$(sudo openssl x509 -noout -fingerprint -sha256 -inform pem -in /mnt/hdd/app-data/lnd/tls.cert | cut -d "=" -f 2)
 
   # construct connection string
   connectionString="type=lnd-rest;server=https://${ip}:${port}/;macaroon=${macaroon};certthumbprint=${certthumb}"
@@ -154,10 +154,10 @@ elif [ "${exportType}" = "sftp" ]; then
   echo "The password needed during download is your Password A."
   echo ""
   echo "Macaroons:"
-  echo "scp bitcoin@${local_ip}:/home/bitcoin/.lnd/data/chain/${network}/${chain}net/\*.macaroon ./"
+  echo "scp bitcoin@${local_ip}:/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/\*.macaroon ./"
   echo ""
   echo "TLS Certificate:"
-  echo "scp bitcoin@${local_ip}:/home/bitcoin/.lnd/tls.cert ./"
+  echo "scp bitcoin@${local_ip}:/mnt/hdd/app-data/lnd/tls.cert ./"
   echo ""
 
 ###########################
@@ -181,10 +181,10 @@ elif [ "${exportType}" = "http" ]; then
   cd 
   randomFolderName=$(shuf -i 100000000-900000000 -n 1)
   mkdir ${randomFolderName}
-  sudo cp /home/bitcoin/.lnd/data/chain/${network}/${chain}net/admin.macaroon ./${randomFolderName}/admin.macaroon
-  sudo cp /home/bitcoin/.lnd/data/chain/${network}/${chain}net/readonly.macaroon ./${randomFolderName}/readonly.macaroon
-  sudo cp /home/bitcoin/.lnd/data/chain/${network}/${chain}net/invoice.macaroon ./${randomFolderName}/invoice.macaroon
-  sudo cp /home/bitcoin/.lnd/tls.cert ./${randomFolderName}/tls.cert
+  sudo cp /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon ./${randomFolderName}/admin.macaroon
+  sudo cp /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/readonly.macaroon ./${randomFolderName}/readonly.macaroon
+  sudo cp /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/invoice.macaroon ./${randomFolderName}/invoice.macaroon
+  sudo cp /mnt/hdd/app-data/lnd/tls.cert ./${randomFolderName}/tls.cert
   cd ${randomFolderName}
   sudo chmod 444 *.*
   python3 -m http.server ${randomPortNumber} 2>/dev/null

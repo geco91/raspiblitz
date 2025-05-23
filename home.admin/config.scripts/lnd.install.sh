@@ -4,7 +4,7 @@
 ## based on https://raspibolt.github.io/raspibolt/raspibolt_40_lnd.html#lightning-lnd
 ## see LND releases: https://github.com/lightningnetwork/lnd/releases
 ### If you change here - make sure to also change interims version in lnd.update.sh #!
-lndVersion="0.18.3-beta"
+lndVersion="0.18.5-beta"
 
 # olaoluwa
 PGPauthor="roasbeef"
@@ -199,11 +199,10 @@ if [ "$1" = "install" ] ; then
   exit 0
 fi
 
-
 # CHAIN is signet | testnet | mainnet
 CHAIN=$2
 if [ -z "${CHAIN}" ] || [ "$2" = purge ]; then
-  source /mnt/hdd/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblitz.conf
   CHAIN=${chain}net
 fi
 if [ "${CHAIN}" = testnet ]||[ "${CHAIN}" = mainnet ]||[ "${CHAIN}" = signet ];then
@@ -233,7 +232,7 @@ fi
 
 source /home/admin/raspiblitz.info
 source <(/home/admin/_cache.sh get state)
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 function removeParallelService() {
   if [ -f "/etc/systemd/system/${netprefix}lnd.service" ];then
@@ -278,21 +277,12 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
   sudo ufw allow ${portprefix}8080 comment "${netprefix}lnd REST"
   sudo ufw allow 1${rpcportmod}009 comment "${netprefix}lnd RPC"
 
-  echo "# Prepare directories"
-  if [ ! -d /mnt/hdd/lnd ]; then
-    echo "# Creating /mnt/hdd/lnd"
-    sudo mkdir /mnt/hdd/lnd
-  fi
-  sudo chown -R bitcoin:bitcoin /mnt/hdd/lnd
-  sudo chmod 755 /mnt/hdd/lnd
-  if [ ! -L /home/bitcoin/.lnd ];then
-    echo "# Linking lnd for user bitcoin"
-    sudo rm /home/bitcoin/.lnd 2>/dev/null
-    sudo ln -s /mnt/hdd/lnd /home/bitcoin/.lnd
-  fi
+  sudo chown -R bitcoin:bitcoin /mnt/hdd/app-data/lnd
+  sudo chmod -R 750 /mnt/hdd/app-data/lnd
+  sudo usermod -a -G lndadmin bitcoin
 
-  echo "# Create /home/bitcoin/.lnd/${netprefix}lnd.conf"
-  if [ ! -f /home/bitcoin/.lnd/${netprefix}lnd.conf ];then
+  echo "# Create /mnt/hdd/app-data/lnd/${netprefix}lnd.conf"
+  if [ ! -f /mnt/hdd/app-data/lnd/${netprefix}lnd.conf ];then
     echo "# LND configuration
 
 [Application Options]
@@ -309,8 +299,8 @@ ignore-historical-gossip-filters=1
 stagger-initial-reconnect=true
 tlsautorefresh=1
 tlsdisableautofill=1
-tlscertpath=/home/bitcoin/.lnd/tls.cert
-tlskeypath=/home/bitcoin/.lnd/tls.key
+tlscertpath=/mnt/hdd/app-data/lnd/tls.cert
+tlskeypath=/mnt/hdd/app-data/lnd/tls.key
 
 # Set to false for nodes with larger amount of channels. This modification leads to increased 
 # latency during initialization, yet significantly boosts runtime performance of the daemon.
@@ -328,9 +318,15 @@ bitcoin.node=bitcoind
 [bolt]
 db.bolt.auto-compact=true
 db.bolt.auto-compact-min-age=672h
-" | sudo -u bitcoin tee /home/bitcoin/.lnd/${netprefix}lnd.conf
+
+# Allow for longer latency, especially useful for <8GB RAM Pi and congested mempool
+[healthcheck] 
+healthcheck.chainbackend.attempts=3
+healthcheck.chainbackend.timeout=2m0s 
+healthcheck.chainbackend.interval=1m30s
+" | sudo -u bitcoin tee /mnt/hdd/app-data/lnd/${netprefix}lnd.conf
   else
-    echo "# The file /home/bitcoin/.lnd/${netprefix}lnd.conf is already present"
+    echo "# The file /mnt/hdd/app-data/lnd/${netprefix}lnd.conf is already present"
   fi
 
   # systemd service
@@ -347,13 +343,13 @@ After=${netprefix}bitcoind.service
 PartOf=${netprefix}bitcoind.service
 
 [Service]
-EnvironmentFile=/mnt/hdd/raspiblitz.conf
+EnvironmentFile=/mnt/hdd/app-data/raspiblitz.conf
 
 ExecStartPre=-/home/admin/config.scripts/lnd.check.sh prestart ${CHAIN}
-ExecStart=/usr/local/bin/lnd --configfile=/home/bitcoin/.lnd/${netprefix}lnd.conf
+ExecStart=/usr/local/bin/lnd --configfile=/mnt/hdd/app-data/lnd/${netprefix}lnd.conf
 # avoid hanging on stop
 # ExecStop=/usr/local/bin/lncli -n=${CHAIN} --rpcserver localhost:1${rpcportmod}009 stop
-PIDFile=/home/bitcoin/.lnd/${netprefix}lnd.pid
+PIDFile=/mnt/hdd/app-data/lnd/${netprefix}lnd.pid
 
 User=bitcoin
 Group=bitcoin
@@ -409,17 +405,18 @@ alias ${netprefix}lncli=\"sudo -u bitcoin /usr/local/bin/lncli\
   fi
   if [ $(grep -c "alias ${netprefix}lndlog" < /home/admin/_aliases) -eq 0 ];then
     echo "\
-alias ${netprefix}lndlog=\"sudo tail -n 30 -f /mnt/hdd/lnd/logs/${network}/${CHAIN}/lnd.log\"\
+alias ${netprefix}lndlog=\"sudo tail -n 30 -f /mnt/hdd/app-data/lnd/logs/${network}/${CHAIN}/lnd.log\"\
 " | sudo tee -a /home/admin/_aliases
   fi
   if [ $(grep -c "alias ${netprefix}lndconf" < /home/admin/_aliases) -eq 0 ];then
     echo "\
-alias ${netprefix}lndconf=\"sudo nano /home/bitcoin/.lnd/${netprefix}lnd.conf\"\
+alias ${netprefix}lndconf=\"sudo nano /mnt/hdd/app-data/lnd/${netprefix}lnd.conf\"\
 " | sudo tee -a /home/admin/_aliases
   fi
 
   # if parameter "initwallet" was set and wallet does not exist yet
-  walletExists=$(sudo ls /mnt/hdd/lnd/data/chain/${network}/${CHAIN}/wallet.db 2>/dev/null | grep -c "wallet.db")
+  walletExists=$(sudo ls /mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/wallet.db 2>/dev/null | grep -c "wallet.db")
+  echo "# initwallet(${initwallet}) walletExists(${walletExists})"
   if [ "${initwallet}" == "1" ] && [ "${walletExists}" == "0" ]; then
       # only ask on mainnet for passwordC - for the testnet/signet its default 'raspiblitz'
       if [ "${CHAIN}" == "mainnet" ]; then
@@ -438,7 +435,8 @@ alias ${netprefix}lndconf=\"sudo nano /home/bitcoin/.lnd/${netprefix}lnd.conf\"\
         echo "# press ENTER to continue"
         read key
       else
-        seedFile="/mnt/hdd/lnd/data/chain/${network}/${CHAIN}/seedwords.info"
+        sudo mkdir -p /mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}
+        seedFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/seedwords.info"
         echo "seedwords='${seedwords}'" | sudo tee ${seedFile}
         echo "seedwords6x4='${seedwords6x4}'" | sudo tee -a ${seedFile}
       fi
@@ -447,7 +445,7 @@ alias ${netprefix}lndconf=\"sudo nano /home/bitcoin/.lnd/${netprefix}lnd.conf\"\
   if [ "${CHAIN}" != "mainnet" ]; then
     echo "# Setting autounlock for ${CHAIN}"
     source <(/home/admin/config.scripts/network.aliases.sh getvars lnd ${CHAIN})
-    passwordFile="/mnt/hdd/lnd/data/chain/${network}/${CHAIN}/password.info"
+    passwordFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/password.info"
     # create passwordfile
     if ! sudo ls ${passwordFile} &>/dev/null; then
       echo "raspiblitz" | sudo -u bitcoin tee ${passwordFile} 1>/dev/null
@@ -473,7 +471,7 @@ alias ${netprefix}lndconf=\"sudo nano /home/bitcoin/.lnd/${netprefix}lnd.conf\"\
   echo "sudo journalctl -fu ${netprefix}lnd"
   echo "sudo systemctl status ${netprefix}lnd"
   echo "# logs:"
-  echo "sudo tail -f /home/bitcoin/.lnd/logs/bitcoin/${CHAIN}/lnd.log"
+  echo "sudo tail -f /mnt/hdd/app-data/lnd/logs/bitcoin/${CHAIN}/lnd.log"
   echo "# for the command line options use"
   echo "${netprefix}lncli help"
   echo
@@ -517,7 +515,7 @@ if [ "$1" = "display-seed" ]; then
   fi
 
   # check if seedword file exists
-  seedwordFile="/mnt/hdd/lnd/data/chain/${network}/${CHAIN}/seedwords.info"
+  seedwordFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/seedwords.info"
   echo "# seedwordFile(${seedwordFile})"
   seedwordFileExists=$(ls ${seedwordFile} 2>/dev/null | grep -c "seedwords.info")
   echo "# seedwordFileExists(${seedwordFileExists})"
@@ -543,7 +541,7 @@ if [ "$1" = "display-seed" ]; then
       sudo rm ${seedwordFile} 2>/dev/null
     fi
   else
-    walletFile="/mnt/hdd/lnd/data/chain/${network}/${CHAIN}/wallet.db"
+    walletFile="/mnt/hdd/app-data/lnd/data/chain/${network}/${CHAIN}/wallet.db"
     whiptail --title "LND ${displayNetwork} Wallet Info" --msgbox "Your LND ${displayNetwork} wallet was already created before - there are no seed words available.\n\nTo secure your wallet secret you can manually backup the file: ${walletFile}" 11 76
   fi
   exit 0

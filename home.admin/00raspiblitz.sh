@@ -8,7 +8,7 @@
 echo "Starting SSH user interface ... (please wait)"
 
 # CONFIGFILE - configuration of RaspiBlitz
-source /mnt/hdd/raspiblitz.conf 2>/dev/null
+source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
 
 # INFOFILE - state data from bootstrap
 infoFile="/home/admin/raspiblitz.info"
@@ -25,7 +25,7 @@ fi
 # special state: copysource
 if [ "${state}" = "stop" ]; then
   echo "***********************************************************"
-  echo "Stop signal detectecd - OK ready for manual provision."
+  echo "Stop signal detected - OK ready for manual provision."
   echo "If your ready for shutdown use the following command:"
   echo "release --> for an official release"
   echo "release -quick --> during development"
@@ -119,7 +119,22 @@ while [ ${exitMenuLoop} -eq 0 ]; do
   if [ "${setupPhase}" != "done" ] && [ "${state}" == "waitsetup" ]; then
     # push user to main menu
     echo "# controlSetupDialog.sh"
-    /home/admin/setup.scripts/controlSetupDialog.sh
+    /home/admin/setup.scripts/controlSetupDialog.sh 
+    # use the exit code from setup menu as signal if menu loop should exited
+    # 0 = continue loop / everything else = break loop and exit to terminal
+    exitMenuLoop=$?
+    if [ "${exitMenuLoop}" != "0" ]; then break; fi
+  fi
+
+  #######################################
+  # 2nd SETUP MENU (after HDD/SSD format)
+  #######################################
+
+  # when is needed & bootstrap process signals that it waits for user dialog
+  if [ "${setupPhase}" != "done" ] && [ "${state}" == "waitsetup-extended" ]; then
+    # push user to main menu
+    echo "# controlSetupExtendedDialog.sh"
+    /home/admin/setup.scripts/controlSetupExtendedDialog.sh 
     # use the exit code from setup menu as signal if menu loop should exited
     # 0 = continue loop / everything else = break loop and exit to terminal
     exitMenuLoop=$?
@@ -261,8 +276,8 @@ MAINMENU > REPAIR > REPAIR-LND > RETRYSCB
       if [ "${state}" == "errorHDD" ]; then
         # print some debug detail info on HDD/SSD error
         echo "###########################################################"
-        echo "# blitz.datadrive.sh status"
-        sudo /home/admin/config.scripts/blitz.datadrive.sh status
+        echo "# blitz.data.sh status"
+        sudo /home/admin/config.scripts/blitz.data.sh status
       fi
       if [ "${message}" == "_provision.setup.sh fail" ]; then
         echo "# /home/admin/raspiblitz.provision-setup.log"
@@ -280,6 +295,7 @@ MAINMENU > REPAIR > REPAIR-LND > RETRYSCB
     else
         # every other state just push as event to SSH frontend
         /home/admin/setup.scripts/eventInfoWait.sh "${state}" "${message}"
+        sleep 1
     fi
   fi
 done

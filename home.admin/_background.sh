@@ -8,25 +8,12 @@
 infoFile="/home/admin/raspiblitz.info"
 
 # CONFIGFILE - configuration of RaspiBlitz
-configFile="/mnt/hdd/raspiblitz.conf"
+configFile="/mnt/hdd/app-data/raspiblitz.conf"
 
 # LOGS see: sudo journalctl -f -u background
 
 echo "_background.sh STARTED"
 echo "INFO: _background.sh loop started - sudo journalctl -f -u background" >> /home/admin/raspiblitz.log
-
-# global vars
-blitzTUIHeartBeatLine=""
-/home/admin/_cache.sh set blitzTUIRestarts "0"
-
-# determine correct raspberrypi boot drive path (that easy to access when sd card is insert into laptop)
-raspi_bootdir=""
-if [ -d /boot/firmware ]; then
-  raspi_bootdir="/boot/firmware"
-elif [ -d /boot ]; then
-  raspi_bootdir="/boot"
-fi
-echo "# raspi_bootdir(${raspi_bootdir})"
 
 counter=0
 while [ 1 ]
@@ -158,7 +145,7 @@ do
       # store the old IP address
       publicIP_Old="${publicIP}"
       # refresh data
-      source /mnt/hdd/raspiblitz.conf
+      source /mnt/hdd/app-data/raspiblitz.conf
       # store the new IP address
       publicIP_New="${publicIP}"
       # some log output
@@ -415,15 +402,15 @@ do
         # RP4 4GB
         if [ ${kbSizeRAM} -gt 3500000 ]; then
           echo "Detected RAM >=4GB --> normalizing bitcoin.conf"
-          sed -i "s/^dbcache=.*/dbcache=512/g" /mnt/hdd/bitcoin/bitcoin.conf
+          sed -i "s/^dbcache=.*/dbcache=512/g" /mnt/hdd/app-data/bitcoin/bitcoin.conf
         # RP4 2GB
         elif [ ${kbSizeRAM} -gt 1500000 ]; then
           echo "Detected RAM >=2GB --> normalizing bitcoin.conf"
-          sed -i "s/^dbcache=.*/dbcache=256/g" /mnt/hdd/bitcoin/bitcoin.conf
+          sed -i "s/^dbcache=.*/dbcache=256/g" /mnt/hdd/app-data/bitcoin/bitcoin.conf
         #RP3/4 1GB
         else
           echo "Detected RAM <=1GB --> normalizing bitcoin.conf"
-          sed -i "s/^dbcache=.*/dbcache=128/g" /mnt/hdd/bitcoin/bitcoin.conf
+          sed -i "s/^dbcache=.*/dbcache=128/g" /mnt/hdd/app-data/bitcoin/bitcoin.conf
         fi
 
         # relax sanning on sync progress (after 30 more secs)
@@ -431,34 +418,6 @@ do
 
       fi
     fi
-  fi
-
-  ###############################
-  # BlitzTUI Monitoring
-  ###############################
-
-  # check every 30sec
-  recheckBlitzTUI=$(($counter % 30))
-  if [ "${touchscreen}" == "1" ] && [ ${recheckBlitzTUI} -eq 1 ]; then
-
-    echo "BlitzTUI Monitoring Check"
-    if [ -d "/var/cache/raspiblitz" ]; then
-      latestHeartBeatLine=$(tail -n 300 /var/cache/raspiblitz/pi/blitz-tui.log | grep beat | tail -n 1)
-    else
-      latestHeartBeatLine=$(tail -n 300 /home/pi/blitz-tui.log | grep beat | tail -n 1)
-    fi
-    if [ ${#blitzTUIHeartBeatLine} -gt 0 ]; then
-      #echo "blitzTUIHeartBeatLine(${blitzTUIHeartBeatLine})"
-      #echo "latestHeartBeatLine(${latestHeartBeatLine})"
-      if [ "${blitzTUIHeartBeatLine}" == "${latestHeartBeatLine}" ]; then
-        echo "FAIL - still no new heart beat .. restarting BlitzTUI"
-        source <(/home/admin/_cache.sh increment system_count_start_tui)
-        init 3 ; sleep 2 ; init 5
-      fi
-    else
-      echo "blitzTUIHeartBeatLine is empty - skipping check"
-    fi
-    blitzTUIHeartBeatLine="${latestHeartBeatLine}"
   fi
 
   ###############################
@@ -474,7 +433,7 @@ do
     #echo "SCB Monitoring ..."
     source ${configFile}
     # check if channel.backup exists
-    scbPath=/mnt/hdd/lnd/data/chain/${network}/${chain}net/channel.backup
+    scbPath=/mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/channel.backup
     scbExists=$(ls $scbPath 2>/dev/null | grep -c 'channel.backup')
     if [ ${scbExists} -eq 1 ]; then
 
@@ -509,17 +468,14 @@ do
         fi
 
         # copy to boot drive (for easy recovery)
-        if [ "${raspi_bootdir}" != "" ]; then
-          cp $scbPath ${raspi_bootdir}/channel.backup
-          if [ $? -eq 0 ]; then
-            echo "OK channel.backup copied to '${raspi_bootdir}/channel.backup'"
-          else
-            logger -p daemon.err "_background.sh FAIL channel.backup copy to '${raspi_bootdir}/channel.backup'"
-            echo "FAIL channel.backup copy to '${raspi_bootdir}/channel.backup'"
-          fi
+        cp $scbPath /boot/firmware/channel.backup
+        if [ $? -eq 0 ]; then
+          echo "OK channel.backup copied to '/boot/firmware/channel.backup'"
         else
-          echo "No boot drive found - skip copy to boot"
+          logger -p daemon.err "_background.sh FAIL channel.backup copy to '/boot/firmware/channel.backup'"
+          echo "FAIL channel.backup copy to '/boot/firmware/channel.backup'"
         fi
+
 
         # check if a additional local backup target is set
         # see ./config.scripts/blitz.backupdevice.sh
@@ -624,8 +580,8 @@ do
         mkdir -p /home/admin/backups/er/ 2>/dev/null
         cp $erPath $localBackupPath
         cp $erPath $localTimestampedPath
-        cp $erPath ${raspi_bootdir}/${netprefix}emergency.recover
-        echo "OK emergency.recover copied to '${localBackupPath}' and '${localTimestampedPath}' and '${raspi_bootdir}/${netprefix}emergency.recover'"
+        cp $erPath /boot/firmware/${netprefix}emergency.recover
+        echo "OK emergency.recover copied to '${localBackupPath}' and '${localTimestampedPath}' and '/boot/firmware/${netprefix}emergency.recover'"
 
         # check if a additional local backup target is set
         # see ./config.scripts/blitz.backupdevice.sh
@@ -707,36 +663,6 @@ do
 
     # sets self-signed certs or letsencrypt certs (if valid) to nginx
     sudo -u admin /home/admin/config.scripts/internet.letsencrypt.sh refresh-nginx-certs
-  fi
-
-  ###############################
-  # SUBSCRIPTION RENEWS
-  ###############################
-
-  # check every 20min
-  recheckSubscription=$((($counter % 1200)+1))
-  if [ ${recheckSubscription} -eq 1 ]; then
-    # IP2TOR subscriptions (that will need renew in next 20min = 1200 secs)
-    sudo -u admin /home/admin/config.scripts/blitz.subscriptions.ip2tor.py subscriptions-renew 1800
-  fi
-
-  ###############################
-  # RAID data check (BRTFS)
-  ###############################
-  # see https://github.com/rootzoll/raspiblitz/issues/360#issuecomment-467698260
-
-  # check every hour
-  recheckRAID=$((($counter % 3600)+1))
-  if [ ${recheckRAID} -eq 1 ]; then
-
-    # check if BTRTFS raid is active & scrub
-    logger -p info "background.sh - RAID data check"
-    source <(/home/admin/config.scripts/blitz.datadrive.sh status)
-    if [ "${isBTRFS}" == "1" ] && [ "${isRaid}" == "1" ]; then
-      echo "STARTING BTRFS RAID DATA CHECK ..."
-      btrfs scrub start /mnt/hdd/
-    fi
-
   fi
 
   ###############################

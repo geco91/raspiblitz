@@ -5,7 +5,7 @@ RTLVERSION="v0.15.2"
 
 # check and load raspiblitz config
 # to know which network is running
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -69,7 +69,7 @@ if [ "$1" = "status" ] || [ "$1" = "menu" ]; then
   # get network info
   isInstalled=$(sudo ls /etc/systemd/system/${netprefix}${typeprefix}RTL.service 2>/dev/null | grep -c 'RTL.service')
   localip=$(hostname -I | awk '{print $1}')
-  toraddress=$(sudo cat /mnt/hdd/tor/${netprefix}${typeprefix}RTL/hostname 2>/dev/null)
+  toraddress=$(sudo cat /mnt/hdd/app-data/tor/${netprefix}${typeprefix}RTL/hostname 2>/dev/null)
   fingerprint=$(openssl x509 -in /mnt/hdd/app-data/nginx/tls.cert -fingerprint -noout | cut -d"=" -f2)
   RTLHTTPS=$((RTLHTTP + 1))
 
@@ -438,7 +438,7 @@ if [ "$1" = "prestart" ]; then
   echo "## RTL PRESTART CONFIG (called by systemd prestart)"
 
   # getting the up-to-date RPC password
-  RPCPASSWORD=$(cat /mnt/hdd/${network}/${network}.conf | grep "^rpcpassword=" | cut -d "=" -f2)
+  RPCPASSWORD=$(cat /mnt/hdd/app-data/${network}/${network}.conf | grep "^rpcpassword=" | cut -d "=" -f2)
   echo "# Using RPCPASSWORD(${RPCPASSWORD})"
 
   # determine correct loop swap server port (lit over loop single)

@@ -2,7 +2,7 @@
 
 # https://github.com/mempool/mempool
 
-pinnedVersion="v3.0.0"
+pinnedVersion="v3.2.1"
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -17,7 +17,7 @@ PGPsigner="wiz"
 PGPpubkeyLink="https://github.com/wiz.gpg"
 PGPpubkeyFingerprint="A394E332255A6173"
 
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
@@ -76,7 +76,7 @@ if [ "$1" = "status" ]; then
 
     # get network info
     localIP=$(hostname -I | awk '{print $1}')
-    toraddress=$(sudo cat /mnt/hdd/tor/mempool/hostname 2>/dev/null)
+    toraddress=$(sudo cat /mnt/hdd/app-data/tor/mempool/hostname 2>/dev/null)
     fingerprint=$(openssl x509 -in /mnt/hdd/app-data/nginx/tls.cert -fingerprint -noout | cut -d"=" -f2)
 
     echo "installed=1"
@@ -239,8 +239,8 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     # prepare .env file
     echo "# getting RPC credentials from the ${network}.conf"
 
-    RPC_USER=$(sudo cat /mnt/hdd/${network}/${network}.conf | grep rpcuser | cut -c 9-)
-    PASSWORD_B=$(sudo cat /mnt/hdd/${network}/${network}.conf | grep rpcpassword | cut -c 13-)
+    RPC_USER=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcuser | cut -c 9-)
+    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/${network}/${network}.conf | grep rpcpassword | cut -c 13-)
 
     sudo rm /var/cache/raspiblitz/mempool-config.json 2>/dev/null
     touch /var/cache/raspiblitz/mempool-config.json

@@ -51,7 +51,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # CONFIGFILE - configuration of RaspiBlitz
-configFile="/mnt/hdd/raspiblitz.conf"
+configFile="/mnt/hdd/app-data/raspiblitz.conf"
 
 # INFOFILE - persited state data
 infoFile="/home/admin/raspiblitz.info"
@@ -107,7 +107,6 @@ echo "importing: _version.info"
 
 # get hardware info
 source <(/home/admin/config.scripts/blitz.hardware.sh status)
-/home/admin/_cache.sh set system_board "${board}"
 /home/admin/_cache.sh set system_ram_mb "${ramMB}"
 /home/admin/_cache.sh set system_ram_gb "${ramGB}"
 
@@ -180,7 +179,7 @@ do
   source <(/home/admin/_cache.sh valid tor_web_addr)
   if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${MINUTE5} ]; then
     echo "updating: tor"
-    /home/admin/_cache.sh set tor_web_addr "$(cat /mnt/hdd/tor/web80/hostname 2>/dev/null)"
+    /home/admin/_cache.sh set tor_web_addr "$(cat /mnt/hdd/app-data/tor/web80/hostname 2>/dev/null)"
   fi
 
   #################
@@ -198,15 +197,6 @@ do
   # DATADRIVE
 
   source <(/home/admin/_cache.sh valid \
-    hdd_mounted \
-    hdd_ssd \
-    hdd_btrfs \
-    hdd_raid \
-    hdd_uasp \
-    hdd_capacity_bytes \
-    hdd_capacity_gb \
-    hdd_free_bytes \
-    hdd_free_gb \
     hdd_used_info \
     hdd_blockchain_data \
   )
@@ -266,23 +256,25 @@ do
   # HARDDRIVE
 
   # info on storage medium
-  source <(/home/admin/_cache.sh valid hdd_mounted)
+  source <(/home/admin/_cache.sh valid hdd_used_info)
   if [ "${stillvalid}" == "0" ] || [ ${age} -gt ${MINUTE2} ]; then
-    echo "updating: /home/admin/config.scripts/blitz.datadrive.sh status"
-    source <(/home/admin/config.scripts/blitz.datadrive.sh status)
-    /home/admin/_cache.sh set hdd_mounted "${isMounted}"
-    /home/admin/_cache.sh set hdd_ssd "${isSSD}"
-    /home/admin/_cache.sh set hdd_btrfs "${isBTRFS}"
-    /home/admin/_cache.sh set hdd_raid "${isRaid}"
-    /home/admin/_cache.sh set hdd_uasp "${hddAdapterUSAP}"
-    /home/admin/_cache.sh set hdd_capacity_bytes "${hddBytes}"
-    /home/admin/_cache.sh set hdd_capacity_gb "${hddGigaBytes}"
-    /home/admin/_cache.sh set hdd_free_bytes "${hddDataFreeBytes}"
-    /home/admin/_cache.sh set hdd_free_gb "${hddDataFreeGB}"
+    echo "updating: /home/admin/config.scripts/blitz.data.sh status"
+    source <(/home/admin/config.scripts/blitz.data.sh status)
+
+    # get TB from storageSizeGB 
+    storageSizeTB=$(echo "scale=2; ${storageSizeGB}/1024" | bc)
+    storageSizeBytes=$(echo "scale=0; ${storageSizeGB}*1024*1024*1024" | bc)
+    storageFreeBytes=$(echo "scale=0; ${storageFreeKB}*1024" | bc)
+    temp=""
+    if [ "${storageCelsius}" != "" ]; then
+      temp="${storageCelsius}°C"
+    fi
+    hddUsedInfo="SSD ${storageSizeTB}TB ${storageUsePercent}% ${temp}"
+    /home/admin/_cache.sh set hdd_used_percent "${hddUsedInfo}"
+    /home/admin/_cache.sh set hdd_temperature_celsius "${storageCelsius}"
     /home/admin/_cache.sh set hdd_used_info "${hddUsedInfo}"
-    /home/admin/_cache.sh set hddTemperature "${hddTemperature}"
-    /home/admin/_cache.sh set hddTBSize "${hddTBSize}"
-    
+    /home/admin/_cache.sh set hdd_capacity_bytes "${storageSizeBytes}"
+    /home/admin/_cache.sh set hdd_free_bytes "${storageFreeBytes}"
   fi
 
   # exit if still setup or higher system stopped
@@ -311,7 +303,7 @@ do
   ####################################################################
 
   # read/update config values
-  source /mnt/hdd/raspiblitz.conf
+  source /mnt/hdd/app-data/raspiblitz.conf
 
   ###################
   # BITCOIN

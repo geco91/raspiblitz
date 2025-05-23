@@ -12,7 +12,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "-help" ];
 fi
 
 # load variables
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 source <(/home/admin/config.scripts/network.aliases.sh getvars cl $2)
 
@@ -73,6 +73,9 @@ if [ "$1" == "prestart" ]; then
       echo "# The cln-grpc plugin is not present but in config"
       sed -i "/^grpc-port/d" ${CLCONF}
       rm -rf /home/bitcoin/${netprefix}cl-plugins-enabled/cln-grpc
+    else
+      echo "# Make sure that the correct GRPC port is used for $NETWORK" 
+      sed -i "/^grpc-port=*/grpc-port=${portprefix}4772/g" ${CLCONF}
     fi
   fi
 

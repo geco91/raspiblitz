@@ -15,11 +15,11 @@ fi
 # check and load raspiblitz config
 # to know which network is running
 source /home/admin/raspiblitz.info
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 # generate data parts
-hex_macaroon=$(sudo xxd -plain /home/bitcoin/.lnd/data/chain/${network}/${chain}net/admin.macaroon | tr -d '\n')
-cert=$(sudo grep -v 'CERTIFICATE' /mnt/hdd/lnd/tls.cert | tr -d '=' | tr '/+' '_-' | tr -d '\n')
+hex_macaroon=$(sudo xxd -plain /mnt/hdd/app-data/lnd/data/chain/${network}/${chain}net/admin.macaroon | tr -d '\n')
+cert=$(sudo grep -v 'CERTIFICATE' /mnt/hdd/app-data/lnd/tls.cert | tr -d '=' | tr '/+' '_-' | tr -d '\n')
 
 #### ADAPT PARAMETERS BASED RASPIBLITZ CONFIG
 
@@ -34,10 +34,10 @@ if [ ${#dynDomain} -gt 0 ]; then
 fi
 
 # make sure lnd rest tor service is active when tor is active
-tor_host=$(sudo cat /mnt/hdd/tor/lndrest/hostname)
+tor_host=$(sudo cat /mnt/hdd/app-data/tor/lndrest/hostname)
 if [ "${runBehindTor}" == "on" ] && [ "${tor_host}" == "" ]; then
   /home/admin/config.scripts/tor.onion-service.sh lndrest 8080 8080
-  tor_host=$(sudo cat /mnt/hdd/tor/lndrest/hostname)
+  tor_host=$(sudo cat /mnt/hdd/app-data/tor/lndrest/hostname)
 fi
 
 # tunnel thru TOR if running and supported by the wallet
@@ -46,7 +46,7 @@ if [ ${forceTOR} -eq 1 ]; then
   if [ "${host}" == "" ]; then
     echo "# setting up onion service ..."
     /home/admin/config.scripts/tor.onion-service.sh lndrest 8080 8080
-    host=$(sudo cat /mnt/hdd/tor/lndrest/hostname)
+    host=$(sudo cat /mnt/hdd/app-data/tor/lndrest/hostname)
   fi
 fi
 

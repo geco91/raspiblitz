@@ -2,7 +2,7 @@
 
 # set version (change if update is available)
 # https://bitcoincore.org/en/download/
-bitcoinVersion="26.0"
+bitcoinVersion="29.0"
 
 
 # command info
@@ -44,11 +44,11 @@ elif [ ${CHAIN} = mainnet ]; then
 fi
 # bitcoinlogpath
 if [ ${CHAIN} = signet ]; then
-  bitcoinlogpath="/mnt/hdd/bitcoin/signet/debug.log"
+  bitcoinlogpath="/mnt/hdd/app-storage/bitcoin/signet/debug.log"
 elif [ ${CHAIN} = testnet ]; then
-  bitcoinlogpath="/mnt/hdd/bitcoin/testnet3/debug.log"
+  bitcoinlogpath="/mnt/hdd/app-storage/bitcoin/testnet3/debug.log"
 elif [ ${CHAIN} = mainnet ]; then
-  bitcoinlogpath="/mnt/hdd/bitcoin/debug.log"
+  bitcoinlogpath="/mnt/hdd/app-storage/bitcoin/debug.log"
 fi
 
 function addBitcoinAliases {
@@ -63,7 +63,7 @@ function addBitcoinAliases {
       sudo tee -a /home/admin/_aliases
   fi
   if ! grep "alias bitcoinconf" /home/admin/_aliases; then
-    echo "alias bitcoinconf=\"sudo nano /mnt/hdd/bitcoin/bitcoin.conf\"" |
+    echo "alias bitcoinconf=\"sudo nano /mnt/hdd/app-data/bitcoin/bitcoin.conf\"" |
       sudo tee -a /home/admin/_aliases
   fi
   sudo chown admin:admin /home/admin/_aliases
@@ -183,64 +183,42 @@ function removeParallelService() {
 
 function installParallelService() {
   echo "# Installing Bitcoin Core instance on ${CHAIN}"
-  # bitcoin.conf
-  if [ ! -f /home/bitcoin/.bitcoin/bitcoin.conf ]; then
-    # add minimal config
-    randomRPCpass=$(tr </dev/urandom -dc _A-Z-a-z-0-9 | head -c8)
-    echo "
-# bitcoind configuration for ${CHAIN}
-
-# Connection settings
-rpcuser=raspiblitz
-rpcpassword=$randomRPCpass
-${bitcoinprefix}.zmqpubrawblock=tcp://127.0.0.1:${zmqprefix}332
-${bitcoinprefix}.zmqpubrawtx=tcp://127.0.0.1:${zmqprefix}333
-${bitcoinprefix}.zmqpubhashblock=tcp://127.0.0.1:${zmqprefix}334
-
-onlynet=onion
-proxy=127.0.0.1:9050
-
-datadir=/mnt/hdd/bitcoin
-" | sudo -u bitcoin tee /home/bitcoin/.bitcoin/bitcoin.conf
-  else
-    echo "# /home/bitcoin/.bitcoin/bitcoin.conf is present"
-  fi
 
   # make sure rpcbind is correctly configured
-  sudo sed -i s/^rpcbind=/main.rpcbind=/g /mnt/hdd/bitcoin/bitcoin.conf
-  if grep "rpcallowip" /mnt/hdd/bitcoin/bitcoin.conf; then
-    if ! grep "${bitcoinprefix}.rpcbind=" /mnt/hdd/bitcoin/bitcoin.conf; then
+  sudo sed -i s/^rpcbind=/main.rpcbind=/g /mnt/hdd/app-data/bitcoin/bitcoin.conf
+  if grep "rpcallowip" /mnt/hdd/app-data/bitcoin/bitcoin.conf; then
+    if ! grep "${bitcoinprefix}.rpcbind=" /mnt/hdd/app-data/bitcoin/bitcoin.conf; then
       echo "${bitcoinprefix}.rpcbind=127.0.0.1" |
-        sudo tee -a /mnt/hdd/bitcoin/bitcoin.conf
+        sudo tee -a /mnt/hdd/app-data/bitcoin/bitcoin.conf
     fi
   fi
 
   # correct rpcport entry
-  sudo sed -i s/^rpcport=/main.rpcport=/g /mnt/hdd/bitcoin/bitcoin.conf
-  if ! grep "${bitcoinprefix}.rpcport" /mnt/hdd/bitcoin/bitcoin.conf; then
+  sudo sed -i s/^rpcport=/main.rpcport=/g /mnt/hdd/app-data/bitcoin/bitcoin.conf
+  if ! grep "${bitcoinprefix}.rpcport" /mnt/hdd/app-data/bitcoin/bitcoin.conf; then
     echo "${bitcoinprefix}.rpcport=${rpcprefix}8332" |
-      sudo tee -a /mnt/hdd/bitcoin/bitcoin.conf
+      sudo tee -a /mnt/hdd/app-data/bitcoin/bitcoin.conf
   fi
 
   # correct zmq entry
-  sudo sed -i s/^zmqpubraw/main.zmqpubraw/g /mnt/hdd/bitcoin/bitcoin.conf
-  if ! grep "${bitcoinprefix}.zmqpubrawblock" /mnt/hdd/bitcoin/bitcoin.conf; then
+  sudo sed -i s/^zmqpubraw/main.zmqpubraw/g /mnt/hdd/app-data/bitcoin/bitcoin.conf
+  if ! grep "${bitcoinprefix}.zmqpubrawblock" /mnt/hdd/app-data/bitcoin/bitcoin.conf; then
     echo "\
 ${bitcoinprefix}.zmqpubrawblock=tcp://127.0.0.1:${zmqprefix}332
 ${bitcoinprefix}.zmqpubrawtx=tcp://127.0.0.1:${zmqprefix}333" |
-      sudo tee -a /mnt/hdd/bitcoin/bitcoin.conf
+      sudo tee -a /mnt/hdd/app-data/bitcoin/bitcoin.conf
   fi
 
   # addnode
   if [ ${bitcoinprefix} = signet ]; then
-    if [ $(grep -c "${bitcoinprefix}.addnode" </mnt/hdd/bitcoin/bitcoin.conf) -eq 0 ]; then
+    if [ $(grep -c "${bitcoinprefix}.addnode" </mnt/hdd/app-data/bitcoin/bitcoin.conf) -eq 0 ]; then
       echo "\
 signet.addnode=s7fcvn5rblem7tiquhhr7acjdhu7wsawcph7ck44uxyd6sismumemcyd.onion:38333
 signet.addnode=6megrst422lxzsqvshkqkg6z2zhunywhyrhy3ltezaeyfspfyjdzr3qd.onion:38333
 signet.addnode=jahtu4veqnvjldtbyxjiibdrltqiiighauai7hmvknwxhptsb4xat4qd.onion:38333
 signet.addnode=f4kwoin7kk5a5kqpni7yqe25z66ckqu6bv37sqeluon24yne5rodzkqd.onion:38333
 signet.addnode=nsgyo7begau4yecc46ljfecaykyzszcseapxmtu6adrfagfrrzrlngyd.onion:38333" |
-        sudo tee -a /mnt/hdd/bitcoin/bitcoin.conf
+        sudo tee -a /mnt/hdd/app-data/bitcoin/bitcoin.conf
     fi
   fi
 
@@ -264,8 +242,8 @@ Environment='MALLOC_ARENA_MAX=1'
 ExecStartPre=-/home/admin/config.scripts/bitcoin.check.sh prestart ${CHAIN}
 ExecStart=/usr/local/bin/bitcoind ${chainparameter} \\
                                   -daemonwait \\
-                                  -conf=/mnt/hdd/bitcoin/bitcoin.conf \\
-                                  -datadir=/mnt/hdd/bitcoin
+                                  -conf=/mnt/hdd/app-data/bitcoin/bitcoin.conf \\
+                                  -datadir=/mnt/hdd/app-storage/bitcoin
 PermissionsStartOnly=true
 
 # Process management
@@ -325,7 +303,7 @@ WantedBy=multi-user.target
     echo "# Installed $(sudo -u bitcoin bitcoind --version | grep version)"
     echo
     echo "# Monitor the ${prefix}bitcoind with:"
-    echo "# sudo tail -f /mnt/hdd/bitcoin/${prefix}debug.log"
+    echo "# sudo tail -f /mnt/hdd/app-storage/bitcoin/${prefix}debug.log"
     echo
   else
     echo "# Installation failed"
@@ -335,10 +313,21 @@ WantedBy=multi-user.target
   fi
 }
 
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 # switch on
 if [ "$1" = "1" ] || [ "$1" = "on" ]; then
+
+  # make sure the bitcoin directory is present and is linked
+  echo "# Bitcoin datadir"
+  source <(sudo /home/admin/config.scripts/blitz.data.sh status)
+  mkdir -p ${storageMountedPath}/app-storage/bitcoin
+  echo "# Liniking /bitcoin"
+  unlink /mnt/hdd/bitcoin 2>/dev/null
+  ln -s ${storageMountedPath}/app-storage/bitcoin /mnt/hdd/bitcoin
+  chown -R bitcoin:bitcoin /mnt/hdd/bitcoin
+  chmod -R 777 /mnt/hdd/bitcoin
+
   installParallelService
   # setting value in raspi blitz config
   /home/admin/config.scripts/blitz.conf.sh set ${CHAIN} "on"

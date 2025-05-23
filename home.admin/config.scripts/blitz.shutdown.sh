@@ -46,9 +46,15 @@ servicesToStop="electrs fulcrum elementsd"
 for service in ${servicesToStop}; do
   if systemctl is-active --quiet ${service}; then
     echo "stopping ${service} - please wait .."
-    timeout 120 systemctl stop ${service}
+    timeout 240 systemctl stop ${service}
   fi
 done
+
+# stop heavy load apps (if installed)
+systemctl stop mempool.service 2>/dev/null
+systemctl stop publicpool.service 2>/dev/null
+systemctl stop btcpayserver.service 2>/dev/null
+systemctl stop nbxplorer.service 2>/dev/null
 
 # lndg
 # stopping LNDg (if installed)
@@ -68,7 +74,7 @@ lightningServicesToStop="lnd tlnd slnd lightningd tlightningd slightningd"
 for service in ${lightningServicesToStop}; do
   if systemctl is-active --quiet ${service}; then
     echo "stopping ${service} - please wait .."
-    timeout 120 systemctl stop ${service}
+    timeout 240 systemctl stop ${service}
   fi
 done
 
@@ -76,11 +82,11 @@ done
 if [ "${network}" != "" ]; then
   # stopping bitcoin (thru cli)
   echo "stop ${network}d (1) - please wait .."
-  timeout 10 sudo -u bitcoin ${network}-cli stop 2>/dev/null
+  timeout 120 sudo -u bitcoin ${network}-cli stop 2>/dev/null
 
   # stopping bitcoind (thru systemd)
   echo "stop ${network}d (2) - please wait .."
-  timeout 120 systemctl stop ${network}d 2>/dev/null
+  timeout 360 systemctl stop ${network}d 2>/dev/null
   timeout 120 systemctl stop t${network}d 2>/dev/null
   timeout 120 systemctl stop s${network}d 2>/dev/null
   sleep 3
@@ -89,27 +95,7 @@ else
 fi
 
 # make sure drives are synced before shutdown
-source <(/home/admin/config.scripts/blitz.datadrive.sh status)
-if [ "${isBTRFS}" == "1" ] && [ "${isMounted}" == "1" ]; then
-  echo "STARTING BTRFS RAID DATA CHECK ..."
-  btrfs scrub start /mnt/hdd/
-fi
 sync
-
-# unmount HDD - try to kill all processes first #3114
-echo "# Killing the processes using /mnt/hdd"
-processesUsingDisk=$(lsof -t "/mnt/hdd")
-if [ -n "$processesUsingDisk" ]; then
-  while read -r pid; do
-    processName=$(ps -p $pid -o comm=)
-    echo "# Stop $processName with: 'kill -SIGTERM $pid'"
-    kill -SIGTERM $pid # Send SIGTERM signal
-    sleep 5            # Wait for the process to terminate
-  done <<<"$processesUsingDisk"
-fi
-
-echo "# Attempt to unmount /mnt/hdd"
-umount "/mnt/hdd"
 
 echo "starting shutdown ..."
 shutdown ${shutdownParams}

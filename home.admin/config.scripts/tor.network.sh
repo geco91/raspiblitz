@@ -69,7 +69,7 @@ deactivateBitcoinOverTor()
 # check and load raspiblitz config
 # to know which network is running
 [ -f "/home/admin/raspiblitz.info" ] && . /home/admin/raspiblitz.info
-[ -f "/mnt/hdd/raspiblitz.conf" ] && . /mnt/hdd/raspiblitz.conf
+[ -f "/mnt/hdd/app-data/raspiblitz.conf" ] && . /mnt/hdd/app-data/raspiblitz.conf
 
 torActive=$(systemctl is-active tor@default | grep -c "^active")
 curl --socks5 127.0.0.1:9050 --socks5-hostname 127.0.0.1:9050 -m 5 -s https://check.torproject.org/api/ip | grep -q "\"IsTor\":true" && torFunctional=1
@@ -98,7 +98,7 @@ case "$1" in
 
     # make sure the network was set (by sourcing raspiblitz.conf)
     if [ ${#network} -eq 0 ]; then
-      echo "# FAIL - unknown network due to missing /mnt/hdd/raspiblitz.conf"
+      echo "# FAIL - unknown network due to missing raspiblitz.conf"
       echo "# switching Tor config on for RaspiBlitz services is just possible after basic hdd/ssd setup"
       echo "# but with new 'Tor by default' basic Tor socks will already be available from the start"
       exit 1
@@ -111,7 +111,7 @@ case "$1" in
     activateBitcoinOverTor
 
     # ACTIVATE APPS OVER TOR
-    . /mnt/hdd/raspiblitz.conf 2>/dev/null
+    . /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
     /home/admin/config.scripts/tor.onion-service.sh web80 80 80 443 443
     /home/admin/config.scripts/tor.onion-service.sh debuglogs 80 6969
     [ "${BTCRPCexplorer}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh btc-rpc-explorer 80 3022 443 3023
@@ -124,7 +124,7 @@ case "$1" in
     [ "${lndg}" = "on" ] && /home/admin/config.scripts/tor.onion-service.sh lndg 80 8886 443 8887
     if [ "${sphinxrelay}" = "on" ]; then
       /home/admin/config.scripts/tor.onion-service.sh sphinxrelay 80 3302 443 3303
-      toraddress=$(sudo cat /mnt/hdd/tor/sphinxrelay/hostname 2>/dev/null)
+      toraddress=$(sudo cat /mnt/hdd/app-data/tor/sphinxrelay/hostname 2>/dev/null)
       sudo -u sphinxrelay bash -c "echo '${toraddress}' > /home/sphinxrelay/sphinx-relay/dist/toraddress.txt"
     fi
     if [ "${helipad}" = "on" ]; then
@@ -135,9 +135,10 @@ case "$1" in
     echo "Setup logrotate"
     # add logrotate config for modified Tor dir on ext. disk
     sudo tee /etc/logrotate.d/raspiblitz-tor >/dev/null <<EOF
-/mnt/hdd/tor/*log {
+/mnt/hdd/app-data/tor/*log {
+        su debian-tor debian-tor
         size 100M
-        rotate 4
+        rotate 2
         compress
         delaycompress
         missingok
@@ -145,16 +146,14 @@ case "$1" in
         create 0640 debian-tor debian-tor
         sharedscripts
         postrotate
-                if invoke-rc.d tor status > /dev/null; then
-                        invoke-rc.d tor reload > /dev/null
-                fi
+            systemctl reload tor >/dev/null 2>&1 || true
         endscript
 }
 EOF
 
     # make sure its the correct owner before last Tor restart
-    sudo chmod -R 700 /mnt/hdd/tor
-    sudo chown -R debian-tor:debian-tor /mnt/hdd/tor
+    sudo chmod -R 700 /mnt/hdd/app-data/tor
+    sudo chown -R debian-tor:debian-tor /mnt/hdd/app-data/tor
     sudo systemctl restart tor@default
     echo "OK - Tor is now $(systemctl is-active tor@default)"
     echo "needs reboot to activate new setting"
@@ -168,7 +167,7 @@ EOF
     /home/admin/config.scripts/blitz.conf.sh set runBehindTor "off"
 
     # remove "debug=tor" from bitcoin.conf
-    sudo sed -i '/^debug=tor$/d' /mnt/hdd/bitcoin/bitcoin.conf
+    sudo sed -i '/^debug=tor$/d' /mnt/hdd/app-databitcoin/bitcoin.conf
 
     # deactivate bitcoin over tor (function call)
     deactivateBitcoinOverTor
@@ -178,22 +177,22 @@ EOF
 
     if [ "${lightning}" = "lnd" ] || [ "${lnd}" = "on" ] || [ "${lnd}" = "1" ]; then
       echo "# *** Removing Tor from LND Mainnet ***"
-      sudo sed -i '/^\[[Tt]or\].*/d' /mnt/hdd/lnd/lnd.conf
-      sudo sed -i '/^tor\..*/d' /mnt/hdd/lnd/lnd.conf
+      sudo sed -i '/^\[[Tt]or\].*/d' /mnt/hdd/app-data/lnd/lnd.conf
+      sudo sed -i '/^tor\..*/d' /mnt/hdd/app-data/lnd/lnd.conf
       sudo systemctl restart lnd
     fi
 
     if [ "${tlnd}" = "on" ] || [ "${tlnd}" = "1" ]; then
       echo "# *** Removing Tor from LND Testnet ***"
-      sudo sed -i '/^\[[Tt]or\].*/d' /mnt/hdd/lnd/tlnd.conf
-      sudo sed -i '/^tor\..*/d' /mnt/hdd/lnd/tlnd.conf
+      sudo sed -i '/^\[[Tt]or\].*/d' /mnt/hdd/app-data/lnd/tlnd.conf
+      sudo sed -i '/^tor\..*/d' /mnt/hdd/app-data/lnd/tlnd.conf
       sudo systemctl restart tlnd
     fi
 
     if [ "${slnd}" = "on" ] || [ "${slnd}" = "1" ]; then
       echo "# *** Removing Tor from LND Signet ***"
-      sudo sed -i '/^\[[Tt]or\].*/d' /mnt/hdd/lnd/slnd.conf
-      sudo sed -i '/^tor\..*/d' /mnt/hdd/lnd/slnd.conf
+      sudo sed -i '/^\[[Tt]or\].*/d' /mnt/hdd/app-data/lnd/slnd.conf
+      sudo sed -i '/^tor\..*/d' /mnt/hdd/app-data/lnd/slnd.conf
       sudo systemctl restart slnd
     fi
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # https://github.com/lightninglabs/lightning-terminal/releases
-LITVERSION="0.12.5-alpha"
+LITVERSION="0.14.1-alpha"
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -12,7 +12,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
 fi
 
 # check who signed the release in https://github.com/lightninglabs/lightning-terminal/releases
-PGPsigner="ViktorTigerstrom"
+PGPsigner="guggero"
 
 if [ $PGPsigner = ellemouton ]; then
   pgpPubKey="D7D916376026F177"
@@ -24,14 +24,14 @@ elif [ $PGPsigner = ViktorTigerstrom ]; then
   pgpPubKey="187F6ADD93AE3B0CF335AA6AB984570980684DCC"
 fi
 
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 # show info menu
 if [ "$1" = "menu" ]; then
 
   # get network info
   localip=$(hostname -I | awk '{print $1}')
-  toraddress=$(sudo cat /mnt/hdd/tor/lit/hostname 2>/dev/null)
+  toraddress=$(sudo cat /mnt/hdd/app-data/tor/lit/hostname 2>/dev/null)
   fingerprint=$(sudo openssl x509 -in /home/lit/.lit/tls.cert -fingerprint -noout | cut -d"=" -f2)
 
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then
@@ -180,7 +180,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     elif [ ${isX86_64} -eq 1 ]; then
       OSversion="amd64"
     fi
-    SHA256=$(grep -i "linux-$OSversion" manifest-v$LITVERSION.txt | cut -d " " -f1)
+    SHA256=$(grep -i "linux-$OSversion-v$LITVERSION.tar.gz" manifest-v$LITVERSION.txt | cut -d " " -f1)
 
     echo
     echo "# LiT v${LITVERSION} for ${OSversion}"
@@ -191,7 +191,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     wget -N https://github.com/lightninglabs/lightning-terminal/releases/download/v${LITVERSION}/${binaryName}
 
     echo "# check binary was not manipulated (checksum test)"
-    wget -N https://github.com/lightninglabs/lightning-terminal/releases/download/v${LITVERSION}/manifest-v${LITVERSION}.sig
+    wget -N https://github.com/lightninglabs/lightning-terminal/releases/download/v${LITVERSION}/manifest-$PGPsigner-v${LITVERSION}.sig
     binaryChecksum=$(sha256sum ${binaryName} | cut -d " " -f1)
     if [ "${binaryChecksum}" != "${SHA256}" ]; then
       echo "# FAIL # Downloaded LiT BINARY not matching SHA256 checksum: ${SHA256}"
@@ -199,7 +199,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     fi
     verifyResult=$(
       LANG=en_US.utf8
-      gpg --verify manifest-v${LITVERSION}.sig manifest-v${LITVERSION}.txt 2>&1
+      gpg --verify manifest-$PGPsigner-v${LITVERSION}.sig manifest-v${LITVERSION}.txt 2>&1
     )
     goodSignature=$(echo ${verifyResult} | grep 'Good signature' -c)
     echo "goodSignature(${goodSignature})"
@@ -225,11 +225,11 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
     # config  #
     ###########
     # check if lnd.conf has rpcmiddleware.enable entry under [rpcmiddleware]
-    if sudo grep rpcmiddleware /mnt/hdd/lnd/lnd.conf; then
-      sudo sed -i "s/^rpcmiddleware.enable=.*/rpcmiddleware.enable=true/g" /mnt/hdd/lnd/lnd.conf
+    if sudo grep rpcmiddleware /mnt/hdd/app-data/lnd/lnd.conf; then
+      sudo sed -i "s/^rpcmiddleware.enable=.*/rpcmiddleware.enable=true/g" /mnt/hdd/app-data/lnd/lnd.conf
     else
-      sudo bash -c "echo '[rpcmiddleware]' >> /mnt/hdd/lnd/lnd.conf"
-      sudo bash -c "echo 'rpcmiddleware.enable=true' >> /mnt/hdd/lnd/lnd.conf"
+      sudo bash -c "echo '[rpcmiddleware]' >> /mnt/hdd/app-data/lnd/lnd.conf"
+      sudo bash -c "echo 'rpcmiddleware.enable=true' >> /mnt/hdd/app-data/lnd/lnd.conf"
     fi
 
     if [ "${runBehindTor}" = "on" ]; then
@@ -241,7 +241,7 @@ if [ "$1" = "1" ] || [ "$1" = "on" ]; then
       LOOPPROXY=""
       POOLPROXY=""
     fi
-    PASSWORD_B=$(sudo cat /mnt/hdd/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+    PASSWORD_B=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
     echo "
 # Application Options
 httpslisten=0.0.0.0:8443

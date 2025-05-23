@@ -11,7 +11,7 @@ if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
  exit 1
 fi
 
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 tor_conf_dir="/mnt/hdd/app-data/tor"
 torrc_services="${tor_conf_dir}/torrc.d/services"
@@ -84,7 +84,7 @@ if [ "${runBehindTor}" = "on" ]; then
   # make new entry for that service
   echo "
 # Hidden Service for $service
-HiddenServiceDir /mnt/hdd/tor/$service
+HiddenServiceDir /mnt/hdd/app-data/tor/$service
 HiddenServiceVersion 3
 HiddenServicePort $toPort 127.0.0.1:$fromPort" | sudo tee -a "${torrc_services}"
 
@@ -116,11 +116,11 @@ HiddenServicePort $toPort 127.0.0.1:$fromPort" | sudo tee -a "${torrc_services}"
   sleep 10
 
   # show the Hidden Service address
-  TOR_ADDRESS=$(sudo cat /mnt/hdd/tor/$service/hostname)
+  TOR_ADDRESS=$(sudo cat /mnt/hdd/app-data/tor/$service/hostname)
   if [ -z "$TOR_ADDRESS" ]; then
     echo "Waiting for the Hidden Service"
     sleep 10
-    TOR_ADDRESS=$(sudo cat /mnt/hdd/tor/$service/hostname)
+    TOR_ADDRESS=$(sudo cat /mnt/hdd/app-data/tor/$service/hostname)
     if [ -z "$TOR_ADDRESS" ]; then
       echo " FAIL - The Hidden Service address could not be found - Tor error?"
       exit 1

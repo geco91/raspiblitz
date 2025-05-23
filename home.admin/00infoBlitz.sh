@@ -273,10 +273,13 @@ if [ "${lightning}" != "" ]; then
 
 fi
 
-
-  lastLine="\
+lastLine="\
+${color_gray}"
+if [ "${ln_external}" != "null" ]; then
+lastLine="\
 ${color_yellow}
 ${color_yellow}${ln_publicColor}${ln_external}${color_gray}"
+fi
 
 if [ "${joinmarket}" = "on" ];then
   # show JoinMarket stats in place of the LND URI only if the Yield Generator is running
@@ -338,7 +341,7 @@ ${color_yellow}               ${color_gray}${network^} Fullnode${LNinfo} ${torIn
 ${color_yellow}        ,/     ${color_yellow}%s
 ${color_yellow}      ,'/      ${color_gray}%s
 ${color_yellow}    ,' /       ${color_gray}%s ${temp_info}
-${color_yellow}  ,'  /_____   ${color_gray}Free Mem ${color_ram}${ram} ${color_gray} HDD ${color_hdd}%s${color_gray}
+${color_yellow}  ,'  /_____   ${color_gray}FreeMem ${color_ram}${ram} ${color_gray}${color_hdd}%s${color_gray}
 ${color_yellow},'_____    ,'  ${color_gray}SSH admin@${internet_localip}${color_gray} d${internet_rx} u${internet_tx}
 ${color_yellow}      /  ,'    ${color_gray}${webuiinfo} 
 ${color_yellow}     / ,'      ${color_gray}${network} ${color_green}${networkVersion}${color_gray}${chain}net ${networkConnectionsInfo}
@@ -347,7 +350,7 @@ ${color_yellow}   /'          ${color_gray}
 ${color_yellow}               ${color_gray}${LNline}
 ${color_yellow}               ${color_gray}${ln_channelInfo} ${ln_peersInfo}
 ${color_yellow}               ${color_gray}${ln_feeReport}
-$lastLine
+${lastLine}
 " \
 "RaspiBlitz ${codeVersion}-${codeRelease}" \
 "-------------------------------------------" \
@@ -360,7 +363,6 @@ if [ ${#undervoltageReports} -gt 0 ] && [ "${undervoltageReports}" != "0" ]; the
 elif [ ${#ups} -gt 1 ] && [ "${upsStatus}" = "n/a" ]; then
   echo "UPS service activated but not running"
 else
-
   # checking status of apps and display if in sync or problems
   appInfoLine=""
 

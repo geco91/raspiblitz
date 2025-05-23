@@ -10,24 +10,24 @@ fi
 echo "###########################################"
 echo "# lnd.compact.sh"
 
-if ! sudo ls /mnt/hdd/lnd/data/graph/mainnet/channel.db; then
-  echo "# /mnt/hdd/lnd/data/graph/mainnet/channel.db does not exist - exiting"
+if ! sudo ls /mnt/hdd/app-data/lnd/data/graph/mainnet/channel.db; then
+  echo "# /mnt/hdd/app-data/lnd/data/graph/mainnet/channel.db does not exist - exiting"
   exit 1
 fi
 
 # check if HDD/SSD has enough space to run compaction (at least again the size as the channel.db at the moment)
-channelDBsizeKB=$(sudo ls -l --block-size=K /mnt/hdd/lnd/data/graph/mainnet/channel.db | cut -d " " -f5 | tr -dc '0-9')
+channelDBsizeKB=$(sudo ls -l --block-size=K /mnt/hdd/app-data/lnd/data/graph/mainnet/channel.db | cut -d " " -f5 | tr -dc '0-9')
 echo "# channelDBsizeKB(${channelDBsizeKB})"
-source <(sudo /home/admin/config.scripts/blitz.datadrive.sh status)
-echo "# hddDataFreeKB(${hddDataFreeKB})"
-if [ "${channelDBsizeKB}" != "" ] && [ "${hddDataFreeKB}" != "" ] && [ ${hddDataFreeKB} -lt ${channelDBsizeKB} ]; then
-  echo "error='HDD/SSD free space is too low to run LND compact'"
+source <(sudo /home/admin/config.scripts/blitz.data.sh status)
+echo "# hddDataFreeKB(${dataFreeKB})"
+if [ "${channelDBsizeKB}" != "" ] && [ "${dataFreeKB}" != "" ] && [ ${dataFreeKB} -lt ${channelDBsizeKB} ]; then
+  echo "error='HDD/SSD/NVMe free space is too low to run LND compact'"
   exit 1
 fi
 
 # check if interactive
 if [ "$1" = interactive ];then
-  channelDBsizeHumanRead=$(sudo du -h /mnt/hdd/lnd/data/graph/mainnet/channel.db | awk '{print $1}')
+  channelDBsizeHumanRead=$(sudo du -h /mnt/hdd/app-data/lnd/data/graph/mainnet/channel.db | awk '{print $1}')
   whiptail --title " Compact LND database? " \
 	--yes-button "Yes" \
 	--no-button "No" \
@@ -52,7 +52,7 @@ sudo systemctl stop lnd
 sudo touch /home/admin/lnd.db.bolt.auto-compact.log
 sudo chmod 777 /home/admin/lnd.db.bolt.auto-compact.log
 echo "# Run LND with --db.bolt.auto-compact"
-sudo -u bitcoin /usr/local/bin/lnd --configfile=/home/bitcoin/.lnd/lnd.conf --db.bolt.auto-compact --db.bolt.auto-compact-min-age=0 > /home/admin/lnd.db.bolt.auto-compact.log &
+sudo -u bitcoin /usr/local/bin/lnd --configfile=/mnt/hdd/app-data/lnd/lnd.conf --db.bolt.auto-compact --db.bolt.auto-compact-min-age=0 > /home/admin/lnd.db.bolt.auto-compact.log &
 
 echo "# Compacting channel.db, this can take a long time"
 
@@ -103,7 +103,7 @@ echo "# Finished compacting."
 echo "# Showing logs:"
 cat /home/admin/lnd.db.bolt.auto-compact.log
 echo
-channelDBsize=$(sudo du -h /mnt/hdd/lnd/data/graph/mainnet/channel.db | awk '{print $1}')
+channelDBsize=$(sudo du -h /mnt/hdd/app-data/lnd/data/graph/mainnet/channel.db | awk '{print $1}')
 echo "# The current channel.db size: $channelDBsize"
 echo "# Exiting. Now can start LND again."
 

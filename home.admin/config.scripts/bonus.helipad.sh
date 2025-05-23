@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #https://github.com/Podcastindex-org/helipad
-HELIPAD_VERSION="v0.2.0"
+HELIPAD_VERSION="v0.2.1"
 HELIPAD_USER=helipad
 HELIPAD_HOME_DIR=/home/$HELIPAD_USER
 HELIPAD_DATA_DIR=/mnt/hdd/app-data/helipad
@@ -19,7 +19,7 @@ HELIPAD_BIN=$HELIPAD_HOME_DIR/.cargo/bin/helipad
 # check and load raspiblitz config
 # to know which network is running
 source /home/admin/raspiblitz.info
-source /mnt/hdd/raspiblitz.conf
+source /mnt/hdd/app-data/raspiblitz.conf
 
 # command info
 if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "-help" ]; then
@@ -38,7 +38,7 @@ if [ "$1" = "menu" ]; then
 
   # get network info
   localip=$(hostname -I | awk '{print $1}')
-  toraddress=$(sudo cat /mnt/hdd/tor/helipad/hostname 2>/dev/null)
+  toraddress=$(sudo cat /mnt/hdd/app-data/tor/helipad/hostname 2>/dev/null)
   fingerprint=$(openssl x509 -in /mnt/hdd/app-data/nginx/tls.cert -fingerprint -noout | cut -d"=" -f2)
 
   if [ "${runBehindTor}" = "on" ] && [ ${#toraddress} -gt 0 ]; then

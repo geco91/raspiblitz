@@ -9,7 +9,7 @@ fi
 
 # load basic system settings
 source /home/admin/raspiblitz.info 2>/dev/null
-source /mnt/hdd/raspiblitz.conf 2>/dev/null
+source /mnt/hdd/app-data/raspiblitz.conf 2>/dev/null
 
 # check that blockchain is set & supported
 if [ "${network}" != "bitcoin" ]; then
@@ -19,8 +19,7 @@ if [ "${network}" != "bitcoin" ]; then
 fi
 
 # check that HDD is available
-isMounted=$(sudo df | grep -c /mnt/hdd)
-if [ "${isMounted}" != "1" ]; then
+if [ ! -L /mnt/hdd/app-data ]; then
   echo "error='no datadrive is mounted'"
   exit 1
 fi
@@ -33,11 +32,11 @@ fi
 source <(/home/admin/_cache.sh get internet_localip)
 
 # check if copy is in progress
-copyBeginTime=$(cat /mnt/hdd/${network}/copy_begin.time 2>/dev/null | tr -cd '[[:digit:]]')
+copyBeginTime=$(cat /mnt/hdd/app-storage/${network}/copy_begin.time 2>/dev/null | tr -cd '[[:digit:]]')
 if [ ${#copyBeginTime} -eq 0 ]; then
   copyBeginTime=0
 fi
-copyEndTime=$(cat /mnt/hdd/${network}/copy_end.time 2>/dev/null | tr -cd '[[:digit:]]')
+copyEndTime=$(cat /mnt/hdd/app-storage/${network}/copy_end.time 2>/dev/null | tr -cd '[[:digit:]]')
 if [ ${#copyEndTime} -eq 0 ]; then
   copyEndTime=0
 fi
@@ -357,7 +356,7 @@ if [ "$1" = "source" ]; then
   echo
   echo "# Starting copy over LAN (around 4-6 hours) ..."
   sed -i "s/^state=.*/state=copysource/g" /home/admin/raspiblitz.info
-  cd /mnt/hdd/${network}
+  cd /mnt/hdd/app-storage/${network}
 
   # transfere beginning flag
   date +%s > /home/admin/copy_begin.time

@@ -45,7 +45,7 @@ WantedBy=multi-user.target
 """
 
 # get LND port form lnd.conf
-LND_PORT = subprocess.getoutput("sudo cat /mnt/hdd/lnd/lnd.conf | grep '^listen=*' | cut -f2 -d':'")
+LND_PORT = subprocess.getoutput("sudo cat /mnt/hdd/app-data/lnd/lnd.conf | grep '^listen=*' | cut -f2 -d':'")
 if len(LND_PORT) == 0:
     LND_PORT = "9735"
 
@@ -173,7 +173,7 @@ def on(restore_on_update=False):
 
     # write ssh tunnel data to raspiblitz config (for update with new sd card)
     print("*** Updating RaspiBlitz Config")
-    with open('/mnt/hdd/raspiblitz.conf') as f:
+    with open('/mnt/hdd/app-data/raspiblitz.conf') as f:
         file_content = f.read()
     if file_content.count("sshtunnel=") == 0:
         file_content = file_content + "\nsshtunnel=''"
@@ -196,12 +196,12 @@ def on(restore_on_update=False):
 
         # make sure server_domain is set as tls alias
         print("Setting server as tls alias")
-        old_config_hash = subprocess.getoutput("sudo shasum -a 256 /mnt/hdd/lnd/lnd.conf")
-        subprocess.call("sudo sed -i \"s/^#tlsextradomain=.*/tlsextradomain=/g\" /mnt/hdd/lnd/lnd.conf", shell=True)
+        old_config_hash = subprocess.getoutput("sudo shasum -a 256 /mnt/hdd/app-data/lnd/lnd.conf")
+        subprocess.call("sudo sed -i \"s/^#tlsextradomain=.*/tlsextradomain=/g\" /mnt/hdd/app-data/lnd/lnd.conf", shell=True)
         subprocess.call(
-            "sudo sed -i \"s/^tlsextradomain=.*/tlsextradomain={}/g\" /mnt/hdd/lnd/lnd.conf".format(ssh_server_host),
+            "sudo sed -i \"s/^tlsextradomain=.*/tlsextradomain={}/g\" /mnt/hdd/app-data/lnd/lnd.conf".format(ssh_server_host),
             shell=True)
-        new_config_hash = subprocess.getoutput("sudo shasum -a 256 /mnt/hdd/lnd/lnd.conf")
+        new_config_hash = subprocess.getoutput("sudo shasum -a 256 /mnt/hdd/app-data/lnd/lnd.conf")
         if old_config_hash != new_config_hash:
             print("lnd.conf changed ... generating new TLS cert")
             subprocess.call("sudo /home/admin/config.scripts/lnd.tlscert.sh refresh", shell=True)
@@ -216,7 +216,7 @@ def on(restore_on_update=False):
             print("No need to set fixed address for LND with raspiblitz lndAddress")
     file_content = "".join([s for s in file_content.splitlines(True) if s.strip("\r\n")]) + "\n"
     print(file_content)
-    with open("/mnt/hdd/raspiblitz.conf", "w") as text_file:
+    with open("/mnt/hdd/app-data/raspiblitz.conf", "w") as text_file:
         text_file.write(file_content)
     print("DONE")
 
@@ -264,12 +264,12 @@ def off():
     print()
 
     print("*** Removing SSH Tunnel data from RaspiBlitz config")
-    with open('/mnt/hdd/raspiblitz.conf') as f:
+    with open('/mnt/hdd/app-data/raspiblitz.conf') as f:
         file_content = f.read()
     file_content = re.sub("sshtunnel=.*", "", file_content)
     file_content = re.sub("\n\n", "\n", file_content)
     print(file_content)
-    with open("/mnt/hdd/raspiblitz.conf", "w") as text_file:
+    with open("/mnt/hdd/app-data/raspiblitz.conf", "w") as text_file:
         text_file.write(file_content)
     print("OK Done")
 
