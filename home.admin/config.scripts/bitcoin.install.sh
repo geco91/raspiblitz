@@ -2,7 +2,7 @@
 
 # set version (change if update is available)
 # https://bitcoincore.org/en/download/
-bitcoinVersion="29.0"
+bitcoinVersion="29.5"
 
 
 # command info
@@ -146,6 +146,7 @@ if [ "$1" = "install" ]; then
   # install
   sudo -u admin tar -xvf ${binaryName}
   sudo install -m 0755 -o root -g root -t /usr/local/bin/ bitcoin-${bitcoinVersion}/bin/*
+  sudo install -m 0644 -o root -g root -D -t /usr/local/share/man/man1 bitcoin-${bitcoinVersion}/share/man/man1/*
   sleep 3
   if ! sudo /usr/local/bin/bitcoind --version | grep "${bitcoinVersion}"; then
     echo

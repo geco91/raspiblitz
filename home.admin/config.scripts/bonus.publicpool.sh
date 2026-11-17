@@ -149,7 +149,7 @@ EOL
 
   # get RPC credentials
   RPC_USER=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcuser | cut -c 9-)
-  RPC_PASS=$(sudo cat /mnt/hd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
+  RPC_PASS=$(sudo cat /mnt/hdd/app-data/bitcoin/bitcoin.conf | grep rpcpassword | cut -c 13-)
 
   echo "# create .env file"
   echo "
@@ -157,7 +157,7 @@ BITCOIN_RPC_URL=http://127.0.0.1
 BITCOIN_RPC_USER=$RPC_USER
 BITCOIN_RPC_PASSWORD=$RPC_PASS
 BITCOIN_RPC_PORT=8332
-BITCOIN_RPC_TIMEOUT=10000
+BITCOIN_RPC_TIMEOUT=20000
 API_PORT=${PORT_API}
 STRATUM_PORT=${PORT_STRATUM}
 POOL_IDENTIFIER=raspiblitz

@@ -263,11 +263,9 @@ Do you really want to update LND now?
       if [ "${loop}" == "on" ]; then
         sudo -u admin /home/admin/config.scripts/bonus.loop.sh off
       fi
-      error=""
-      warn=""
-      source <(sudo -u admin /home/admin/config.scripts/lnd.update.sh verified)
-      if [ ${#error} -gt 0 ]; then
-        whiptail --title "ERROR" --msgbox "${error}" 8 30
+      sudo -u admin /home/admin/config.scripts/lnd.update.sh verified
+      if [ $? -ne 0 ]; then
+        whiptail --title "ERROR" --msgbox "LND update failed" 8 30
       else
         whiptail \
          --title " LND update " \
@@ -309,10 +307,9 @@ Do you really want to update LND now?
         echo "# cancel update"
         exit 0
       fi
-      error=""
-      source <(sudo -u admin /home/admin/config.scripts/lnd.update.sh reckless)
-      if [ ${#error} -gt 0 ]; then
-        whiptail --title "ERROR" --msgbox "${error}" 8 30
+      sudo -u admin /home/admin/config.scripts/lnd.update.sh reckless
+      if [ $? -ne 0 ]; then
+        whiptail --title "ERROR" --msgbox "LND update failed" 8 30
       else
         whiptail \
          --title " LND update " \
@@ -374,11 +371,9 @@ Do you really want to update Core Lightning now?
         echo "# cancel update"
         exit 0
       fi
-      error=""
-      warn=""
-      source <(sudo -u admin /home/admin/config.scripts/cl.update.sh verified)
-      if [ ${#error} -gt 0 ]; then
-        whiptail --title "ERROR" --msgbox "${error}" 8 30
+      sudo -u admin /home/admin/config.scripts/cl.update.sh verified
+      if [ $? -ne 0 ]; then
+        whiptail --title "ERROR" --msgbox "Core Lightning update failed" 8 40
       else
         echo "# Core Lightning was updated successfully"
         exit 0
@@ -399,10 +394,9 @@ Do you really want to update Core Lightning now?
         echo "# cancel update"
         exit 0
       fi
-      error=""
-      source <(sudo -u admin /home/admin/config.scripts/cl.update.sh reckless)
-      if [ ${#error} -gt 0 ]; then
-        whiptail --title "ERROR" --msgbox "${error}" 8 30
+      sudo -u admin /home/admin/config.scripts/cl.update.sh reckless
+      if [ $? -ne 0 ]; then
+        whiptail --title "ERROR" --msgbox "Core Lightning update failed" 8 40
       else
         echo "# Core Lightning was updated successfully"
 
@@ -459,7 +453,13 @@ Do you really want to update Bitcoin Core now?
 
       error=""
       warn=""
-      sudo -u admin /home/admin/config.scripts/bitcoin.update.sh tested
+      sudo -u admin /home/admin/config.scripts/bitcoin.update.sh tested || {
+        whiptail --title "ERROR" --msgbox "bitcoin.update.sh failed
+
+It was called at $(readlink -f "${BASH_SOURCE[0]}"):${LINENO}
+Consider running that manually to debug " 10 80
+        exit 0
+      }
       whiptail \
         --title " Bitcoin Core update " \
         --yes-button "Reboot" \
@@ -497,33 +497,32 @@ Do you really want to update Bitcoin Core now?
         echo "# cancel update"
         exit 0
       fi
-      error=""
-      source <(sudo -u admin /home/admin/config.scripts/bitcoin.update.sh reckless)
-      if [ ${#error} -gt 0 ]; then
-        whiptail --title "ERROR" --msgbox "${error}" 8 30
-      fi
-      whiptail \
-        --title " Bitcoin Core update " \
-        --yes-button "Reboot" \
-        --no-button "Skip Reboot" \
-        --yesno \
+      sudo -u admin /home/admin/config.scripts/bitcoin.update.sh reckless
+      if [ $? -ne 0 ]; then
+        whiptail --title "ERROR" --msgbox "Bitcoin Core update failed" 8 40
+      else
+        whiptail \
+          --title " Bitcoin Core update " \
+          --yes-button "Reboot" \
+          --no-button "Skip Reboot" \
+          --yesno \
 "OK Bitcoin Core update is done.
 
 By default a reboot is advised.
-      " 9 40
-      if [ $? -eq 0 ]; then
-        clear
-        echo "REBOOT .."
-        sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
-        sleep 8
-        exit 1
-      else
-        echo "# SKIP REBOOT"
-        echo "# starting the bitcoind.service .."
-        sudo systemctl start bitcoind
-        exit 0
+        " 9 40
+        if [ $? -eq 0 ]; then
+          clear
+          echo "REBOOT .."
+          sudo /home/admin/config.scripts/blitz.shutdown.sh reboot
+          sleep 8
+          exit 1
+        else
+          echo "# SKIP REBOOT"
+          echo "# starting the bitcoind.service .."
+          sudo systemctl start bitcoind
+          exit 0
+        fi
       fi
-      sleep 8
       ;;
     CUSTOM)
       if ! sudo -u admin /home/admin/config.scripts/bitcoin.update.sh custom; then
@@ -551,7 +550,6 @@ By default a reboot is advised.
           exit 0
         fi
       fi
-      sleep 8
       ;;
   esac
 }
@@ -583,6 +581,10 @@ fi
 
 if [ "${ElectRS}" == "on" ]; then
   OPTIONS+=(ELECTRS "Update Electrs")
+fi
+
+if [ "${fulcrum}" == "on" ]; then
+  OPTIONS+=(FULCRUM "Update Fulcrum")
 fi
 
 if [ "${RTL}" == "on" ]||[ "${cRTL}" == "on" ]; then
@@ -655,6 +657,9 @@ case $CHOICE in
     ;;
   ELECTRS)
     /home/admin/config.scripts/bonus.electrs.sh update
+    ;;
+  FULCRUM)
+    /home/admin/config.scripts/bonus.fulcrum.sh update
     ;;
   RTL)
     /home/admin/config.scripts/bonus.rtl.sh update

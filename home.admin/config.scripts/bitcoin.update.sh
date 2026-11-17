@@ -28,7 +28,7 @@ fi
 mode="$1"
 
 # RECOMMENDED UPDATE BY RASPIBLITZ TEAM (latest tested version available)
-bitcoinVersion="" # example: 22.0 .. keep empty if no newer version as sd card build is available
+bitcoinVersion="32.1" # example: 22.0 .. keep empty if no newer version as sd card build is available
 
 # GATHER DATA
 # setting download directory to the current user
@@ -44,7 +44,7 @@ elif [ "$(uname -m | grep -c 'x86_64')" -gt 0 ]; then
 fi
 
 # installed version
-installedVersion=$(sudo -u bitcoin bitcoind --version | head -n1 | cut -d" " -f4 | cut -c 2-)
+installedVersion=$(sudo -u bitcoin bitcoind --version | head -n1 | cut -d" " -f5 | cut -c 2-)
 
 # test if the installed version already the tested/recommended update version
 bitcoinUpdateInstalled=$(echo "${installedVersion}" | grep -c "${bitcoinVersion}")
@@ -137,12 +137,12 @@ if [ "${mode}" = "tested" ]; then
   if [ "${result}" -eq 2 ]; then
     # this can happen if bitcoin install script already has a higher version then the tested version set by this script (see above)
     echo "# installed version is newer then to be updated version --> ABORT"
-    echo 
+    echo
     exit 1
   fi
   if [ "${result}" -eq 0 ]; then
     echo "# version is already installed --> ABORT"
-    echo 
+    echo
     exit 1
   fi
 
@@ -288,6 +288,7 @@ if [ "${mode}" = "tested" ] || [ "${mode}" = "reckless" ] || [ "${mode}" = "cust
   echo "# Installing Bitcoin Core v${bitcoinVersion}"
   tar -xvf ${binaryName}
   sudo install -m 0755 -o root -g root -t /usr/local/bin/ bitcoin-${bitcoinVersion}/bin/*
+  sudo install -m 0644 -o root -g root -D -t /usr/local/share/man/man1 bitcoin-${bitcoinVersion}/share/man/man1/*
   sleep 3
   if ! sudo -u bitcoin /usr/local/bin/bitcoind --version | grep "${bitcoinVersion}"; then
     echo
